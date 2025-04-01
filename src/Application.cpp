@@ -1,0 +1,276 @@
+#include "gl_core_3_3.h"
+#include "Application.hpp"
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <iostream>
+#include <glm/gtc/type_ptr.hpp>
+
+Application::Application() :
+    lastFrameTime(0),
+    currentTime(0),
+    deltaTime(0),
+    isRunning(true)
+{
+    // Initialize components
+    /*cardDatabase = std::make_unique<CardDatabase>();*/
+    //textureManager = std::make_unique<TextureManager>();
+    //cardPack = std::make_unique<CardPack>();
+    //inputHandler = std::make_unique<InputHandler>(cardPack.get(), nullptr);
+    std::cout << "Application constructor START" << std::endl;
+    // ONLY initialize components that DO NOT require OpenGL context
+    cardDatabase = std::make_unique<CardDatabase>();
+    std::cout << "Application constructor END (OpenGL components NOT created yet)" << std::endl;
+}
+
+Application::~Application() {
+    // Resources will be cleaned up by unique_ptr
+}
+
+//void Application::initialize(int argc, char** argv) {
+//    // Initialize GLUT
+//    glutInit(&argc, argv);
+//    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+//    glutInitWindowSize(800, 600);
+//    glutCreateWindow("Pokémon Pack Simulator");
+//
+//    // Setup GLUT callbacks
+//    glutDisplayFunc(displayCallback);
+//    glutReshapeFunc(reshapeCallback);
+//    glutKeyboardFunc(keyboardCallback);
+//    glutMouseFunc(mouseCallback);
+//    glutMotionFunc(motionCallback);
+//    glutIdleFunc(idleCallback);
+//
+//    // Initialize OpenGL
+//    glEnable(GL_DEPTH_TEST);
+//    glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+//
+//    // Generate a card pack
+//    cardPack->generateCards(*cardDatabase);
+//}
+void Application::initialize(int argc, char** argv) {
+    std::cout << "Application::initialize START" << std::endl;
+
+    // Initialize GLUT
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+    glutInitWindowSize(800, 600);
+
+    std::cout << "Calling glutCreateWindow..." << std::endl;
+    glutCreateWindow("Pokémon Pack Simulator");
+    std::cout << "glutCreateWindow DONE (OpenGL context should exist now)" << std::endl;
+    
+    try {
+        std::vector<GLuint> shaders;
+        shaders.push_back(compileShader(GL_VERTEX_SHADER, "shaders/pack_v.glsl"));
+        shaders.push_back(compileShader(GL_FRAGMENT_SHADER, "shaders/pack_f.glsl"));
+        shaderProgramID = linkProgram(shaders);
+        std::cout << "Shaders loaded and linked successfully. Program ID: " << shaderProgramID << std::endl;
+
+        // Cleanup shader objects after linking
+        for (GLuint s : shaders) {
+            glDeleteShader(s);
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Shader Error: " << e.what() << std::endl;
+        // Handle error appropriately (e.g., exit)
+        cleanup(); // Or some other error handling
+        exit(1);
+    }
+
+    // *** IMPORTANT: Initialize OpenGL function pointers ***
+    // Although Galogen loads implicitly, it's safer AFTER window creation.
+    // If using GLEW/GLAD explicitly, call glewInit() or gladLoadGL() here.
+    // For Galogen, the first GL call after this point should work. Let's
+    // make a harmless call just to be sure or to trigger the loading.
+    GLenum err = glGetError(); // Call a basic GL function to trigger pointer loading if needed.
+    if (err != GL_NO_ERROR) {
+        std::cerr << "OpenGL error after window creation: " << err << std::endl;
+        // Consider exiting or throwing an exception
+    }
+    // Or, if Galogen has an explicit init function, call it here.
+
+    std::cout << "Initializing OpenGL-dependent components..." << std::endl;
+
+    // NOW create objects that use OpenGL
+    textureManager = std::make_unique<TextureManager>();
+    std::cout << "Loading textures..." << std::endl;
+    // Adjust path as needed relative to your executable's working directory
+    packTextureID = textureManager->loadTexture("textures/pack/pack_diffuse.png");
+    if (packTextureID == 0) {
+        std::cerr << "Failed to load pack texture!" << std::endl;
+        // Handle error - maybe use a placeholder color in shader?
+    }
+    else {
+        std::cout << "Pack texture loaded. ID: " << packTextureID << std::endl;
+    }
+    cardPack = std::make_unique<CardPack>(); // This will call Mesh constructor - now it's safe!
+    // InputHandler depends on cardPack, so create it after cardPack
+    inputHandler = std::make_unique<InputHandler>(cardPack.get(), nullptr); // Pass the valid pointer
+
+    std::cout << "OpenGL-dependent components Initialized." << std::endl;
+
+    // Setup GLUT callbacks (These need the application instance, often via a global)
+    glutDisplayFunc(displayCallback);
+    glutReshapeFunc(reshapeCallback);
+    glutKeyboardFunc(keyboardCallback);
+    glutMouseFunc(mouseCallback);
+    glutMotionFunc(motionCallback);
+    glutIdleFunc(idleCallback);
+
+    // Initialize OpenGL states
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+
+    // Generate a card pack (Now cardPack and cardDatabase exist)
+    if (cardPack && cardDatabase) { // Good practice to check pointers
+        std::cout << "Generating cards..." << std::endl;
+        cardPack->generateCards(*cardDatabase);
+        std::cout << "Cards generated." << std::endl;
+    }
+    else {
+        std::cerr << "Error: cardPack or cardDatabase is null before generating cards!" << std::endl;
+    }
+
+    // Calculate initial time
+    lastFrameTime = (float)glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+
+    std::cout << "Application::initialize END" << std::endl;
+}
+
+void Application::run() {
+	isRunning = true; // Set running flag to true
+    glutMainLoop();
+}
+
+void Application::update() {
+    // Calculate delta time
+    float newTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+    deltaTime = newTime - currentTime;
+    currentTime = newTime;
+
+    // Update components
+    if (cardPack) {
+        cardPack->update(deltaTime);
+    }
+}
+
+void Application::render() {
+    // Clear the screen
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+
+    // Create view-projection matrix
+    glm::mat4 projection = glm::perspective(
+        glm::radians(45.0f),
+        (float)glutGet(GLUT_WINDOW_WIDTH) / (float)glutGet(GLUT_WINDOW_HEIGHT),
+        0.1f,
+        100.0f
+    );
+
+    glm::mat4 view = glm::lookAt(
+        cameraPos,
+        glm::vec3(0.0f, 0.0f, 0.0f),  // Look at position
+        glm::vec3(0.0f, 1.0f, 0.0f)   // Up vector
+    );
+
+    glm::mat4 viewProjection = projection * view;
+
+    // *** ACTIVATE THE SHADER ***
+    glUseProgram(shaderProgramID);
+
+    // *** SET VIEW AND PROJECTION UNIFORMS (once per frame usually) ***
+    GLint viewLoc = glGetUniformLocation(shaderProgramID, "view");
+    GLint projLoc = glGetUniformLocation(shaderProgramID, "projection");
+    GLint viewPosLoc = glGetUniformLocation(shaderProgramID, "viewPos"); // For lighting
+
+    if (viewLoc != -1) {
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    }
+    else {
+        std::cerr << "Warning: Uniform 'view' not found in shader." << std::endl;
+    }
+    if (projLoc != -1) {
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    }
+    else {
+        std::cerr << "Warning: Uniform 'projection' not found in shader." << std::endl;
+    }
+    if (viewPosLoc != -1) {
+        glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
+    }
+    else {
+        std::cerr << "Warning: Uniform 'viewPos' not found in shader." << std::endl;
+    }
+
+    // --- Texture Setup (Needs implementation) ---
+    // You'll need to:
+    // 1. Load a texture using textureManager->loadTexture("path/to/texture.png");
+    // 2. Activate a texture unit: glActiveTexture(GL_TEXTURE0);
+    // 3. Bind the texture: glBindTexture(GL_TEXTURE_2D, textureID);
+    // 4. Tell the shader sampler uniform which unit to use:
+    GLint texLoc = glGetUniformLocation(shaderProgramID, "diffuseTexture");
+    if (texLoc != -1) {
+        glActiveTexture(GL_TEXTURE0); // Activate texture unit 0
+        glBindTexture(GL_TEXTURE_2D, packTextureID); // Bind the loaded texture
+        glUniform1i(texLoc, 0); // Tell sampler uniform to use texture unit 0
+    }
+    else {
+        std::cerr << "Warning: Uniform 'diffuseTexture' not found." << std::endl;
+    }
+    // --- End Texture Setup Placeholder ---
+
+    // Render components that use this shader
+    if (cardPack) {
+        // *** PASS DATA TO SHADER ***
+        cardPack->render(shaderProgramID); // Pass shader ID
+    }
+
+    // Render components
+    //cardPack->render(viewProjection);
+
+	glUseProgram(0); // Deactivate the shader program after rendering
+    glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture from unit 0
+
+    // Swap buffers
+    glutSwapBuffers();
+}
+
+void Application::cleanup() {
+    // Cleanup will be handled by unique_ptr destructors
+	isRunning = false; // Set running flag to false
+}
+
+// GLUT callback wrappers
+void Application::displayCallback() {
+    application->render();
+}
+
+void Application::reshapeCallback(int width, int height) {
+    glViewport(0, 0, width, height);
+}
+
+void Application::keyboardCallback(unsigned char key, int x, int y) {
+    if (application && application->inputHandler) {
+        application->inputHandler->handleKeyPress(key, x, y);
+    }
+}
+
+void Application::mouseCallback(int button, int state, int x, int y) {
+    if (application && application->inputHandler) {
+        application->inputHandler->handleMouseClick(button, state, x, y);
+    }
+}
+
+void Application::motionCallback(int x, int y) {
+    if (application && application->inputHandler) {
+        application->inputHandler->handleMouseMotion(x, y);
+    }
+}
+
+void Application::idleCallback() {
+    application->update();
+    glutPostRedisplay();
+}

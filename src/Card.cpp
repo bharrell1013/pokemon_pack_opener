@@ -11,7 +11,9 @@ Card::Card(std::string name, std::string type, std::string rarity) :
     scale(glm::vec3(1.0f, 1.0f, 1.0f)),
     velocity(glm::vec3(0.0f, 0.0f, 0.0f)),
     shininess(0.5f),
-    holoIntensity(0.0f)
+    holoIntensity(0.0f),
+    revealProgress(0.0f),
+    isRevealed(false)
 {
     // Set holoIntensity based on rarity
     if (rarity == "holo") {
@@ -23,6 +25,9 @@ Card::Card(std::string name, std::string type, std::string rarity) :
     else if (rarity == "ex" || rarity == "full art") {
         holoIntensity = 0.9f;
     }
+
+    // Initialize card mesh
+    initializeMesh();
 }
 
 Card::~Card() {
@@ -33,8 +38,25 @@ Card::~Card() {
 }
 
 void Card::loadTexture() {
-    // This will be implemented when we have the TextureManager
-    // For now, just a placeholder
+    // Get texture path based on Pokemon type
+    std::string texturePath = "textures/pokemon/" + pokemonName + ".png";
+    std::string cardTemplatePath = "textures/cards/template_" + pokemonType + ".png";
+    
+    // Try to load the Pokemon texture
+    if (textureID == 0) {
+        // First try to load specific Pokemon texture
+        textureID = TextureManager::getInstance().loadTexture(texturePath);
+        
+        if (textureID == 0) {
+            // If specific texture not found, load default type template
+            textureID = TextureManager::getInstance().loadTexture(cardTemplatePath);
+        }
+        
+        // Apply special effects based on rarity
+        if (rarity == "holo" || rarity == "reverse" || rarity == "ex" || rarity == "full art") {
+            textureID = TextureManager::getInstance().generateHoloEffect(textureID, rarity);
+        }
+    }
 }
 
 void Card::render(const glm::mat4& viewProjection) {
@@ -55,16 +77,83 @@ void Card::render(const glm::mat4& viewProjection) {
     // Calculate final transformation matrix
     glm::mat4 mvpMatrix = viewProjection * modelMatrix;
 
-    // For now, we'll just render a placeholder quad
-    // Later, we'll render actual card meshes with textures
+    // Apply appropriate shader based on card rarity
+    if (rarity == "holo" || rarity == "reverse" || rarity == "ex" || rarity == "full art") {
+        TextureManager::getInstance().applyHoloShader(*this, static_cast<float>(glfwGetTime()));
+    } else {
+        TextureManager::getInstance().applyCardShader(*this);
+    }
+
+    // Bind texture
+    if (textureID != 0) {
+        glBindTexture(GL_TEXTURE_2D, textureID);
+    }
+
+    // Render card quad
+    // This assumes we have a basic quad mesh set up
+    // You'll need to implement the actual rendering code here
+    // using your mesh system
 }
 
 void Card::update(float deltaTime) {
-    // Simple physics update
-    position += velocity * deltaTime;
+    // Update reveal animation if in progress
+    if (!isRevealed) {
+        updateRevealAnimation(deltaTime);
+    }
 
-    // Add some damping to the velocity
-    velocity *= 0.98f;
+    // Physics update
+    position += velocity * deltaTime;
+    velocity *= 0.98f; // Damping
+
+    // Update transform
+    updateTransform();
+}
+
+void Card::initializeMesh() {
+    // Create a new mesh for the card
+    cardMesh = std::make_unique<Mesh>();
+
+    // Define card vertices (simple rectangle)
+    std::vector<float> vertices = {
+        // Positions          // Texture coords  // Normals
+        -CARD_WIDTH/2, -CARD_HEIGHT/2, 0.0f,    0.0f, 0.0f,    0.0f, 0.0f, 1.0f,
+         CARD_WIDTH/2, -CARD_HEIGHT/2, 0.0f,    1.0f, 0.0f,    0.0f, 0.0f, 1.0f,
+         CARD_WIDTH/2,  CARD_HEIGHT/2, 0.0f,    1.0f, 1.0f,    0.0f, 0.0f, 1.0f,
+        -CARD_WIDTH/2,  CARD_HEIGHT/2, 0.0f,    0.0f, 1.0f,    0.0f, 0.0f, 1.0f
+    };
+
+    // Define indices for triangles
+    std::vector<unsigned int> indices = {
+        0, 1, 2,
+        2, 3, 0
+    };
+
+    // Initialize the mesh
+    cardMesh->initialize(vertices, indices);
+}
+
+void Card::startRevealAnimation() {
+    revealProgress = 0.0f;
+    isRevealed = false;
+}
+
+void Card::updateRevealAnimation(float deltaTime) {
+    if (!isRevealed) {
+        revealProgress += deltaTime;
+        if (revealProgress >= 1.0f) {
+            revealProgress = 1.0f;
+            isRevealed = true;
+        }
+
+        // Update rotation based on reveal progress
+        float revealAngle = (1.0f - revealProgress) * glm::pi<float>();
+        rotation.y = revealAngle;
+    }
+}
+
+void Card::updateTransform() {
+    // This will be called whenever position, rotation, or scale changes
+    // The actual transformation matrix is computed in the render function
 }
 
 // Getters and setters

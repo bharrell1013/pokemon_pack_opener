@@ -49,6 +49,7 @@ public:
     // Random selection helpers
     std::string getRandomPokemon();
     std::string getRandomPokemonOfType(const std::string& type);
+    std::string getPokemonType(const std::string& pokemonName);
 };
 
 #endif

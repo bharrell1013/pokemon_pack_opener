@@ -4,6 +4,8 @@
 #include "gl_core_3_3.h"
 #include <string>
 #include <glm/glm.hpp>
+#include <memory>
+#include "mesh.hpp"
 
 class Card {
 private:
@@ -11,6 +13,7 @@ private:
     std::string pokemonType;  // fire, water, grass, etc.
     std::string rarity;       // normal, reverse, holo, ex, full art
     GLuint textureID;
+    std::unique_ptr<Mesh> cardMesh;
 
     // Positioning and animation properties
     glm::vec3 position;
@@ -22,6 +25,15 @@ private:
     float shininess;
     float holoIntensity;
 
+    // Animation properties
+    float revealProgress;     // 0.0 to 1.0 for card reveal animation
+    bool isRevealed;
+    
+    // Card dimensions
+    const float CARD_WIDTH = 2.5f;
+    const float CARD_HEIGHT = 3.5f;
+    const float CARD_DEPTH = 0.01f;
+
 public:
     Card(std::string name, std::string type, std::string rarity);
     ~Card();
@@ -29,6 +41,11 @@ public:
     void loadTexture();
     void render(const glm::mat4& viewProjection);
     void update(float deltaTime);
+    
+    // Animation controls
+    void startRevealAnimation();
+    void updateRevealAnimation(float deltaTime);
+    bool isRevealComplete() const { return isRevealed; }
 
     // Getters and setters
     std::string getPokemonName() const;
@@ -39,6 +56,10 @@ public:
     void setRotation(const glm::vec3& rot);
     void setScale(const glm::vec3& scale);
     void setVelocity(const glm::vec3& vel);
+
+private:
+    void initializeMesh();
+    void updateTransform();
 };
 
 #endif

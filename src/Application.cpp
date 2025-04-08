@@ -17,8 +17,7 @@ Application::Application() :
     //cardPack = std::make_unique<CardPack>();
     //inputHandler = std::make_unique<InputHandler>(cardPack.get(), nullptr);
     std::cout << "Application constructor START" << std::endl;
-    // ONLY initialize components that DO NOT require OpenGL context
-    cardDatabase = std::make_unique<CardDatabase>();
+    // Note: We'll initialize OpenGL-dependent components in initialize()
     std::cout << "Application constructor END (OpenGL components NOT created yet)" << std::endl;
 }
 
@@ -31,7 +30,7 @@ Application::~Application() {
 //    glutInit(&argc, argv);
 //    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
 //    glutInitWindowSize(800, 600);
-//    glutCreateWindow("Pokémon Pack Simulator");
+//    glutCreateWindow("Pokï¿½mon Pack Simulator");
 //
 //    // Setup GLUT callbacks
 //    glutDisplayFunc(displayCallback);
@@ -57,7 +56,7 @@ void Application::initialize(int argc, char** argv) {
     glutInitWindowSize(800, 600);
 
     std::cout << "Calling glutCreateWindow..." << std::endl;
-    glutCreateWindow("Pokémon Pack Simulator");
+    glutCreateWindow("Pokï¿½mon Pack Simulator");
     std::cout << "glutCreateWindow DONE (OpenGL context should exist now)" << std::endl;
     
     try {
@@ -93,21 +92,30 @@ void Application::initialize(int argc, char** argv) {
 
     std::cout << "Initializing OpenGL-dependent components..." << std::endl;
 
-    // NOW create objects that use OpenGL
+    // Create TextureManager first since other components depend on it
     textureManager = std::make_unique<TextureManager>();
+    std::cout << "TextureManager created" << std::endl;
+
+    // Create CardDatabase with TextureManager
+    cardDatabase = std::make_unique<CardDatabase>(textureManager.get());
+    std::cout << "CardDatabase created" << std::endl;
+
+    // Load pack texture
     std::cout << "Loading textures..." << std::endl;
-    // Adjust path as needed relative to your executable's working directory
     packTextureID = textureManager->loadTexture("textures/pack/pack_diffuse.png");
     if (packTextureID == 0) {
         std::cerr << "Failed to load pack texture!" << std::endl;
-        // Handle error - maybe use a placeholder color in shader?
-    }
-    else {
+    } else {
         std::cout << "Pack texture loaded. ID: " << packTextureID << std::endl;
     }
-    cardPack = std::make_unique<CardPack>(); // This will call Mesh constructor - now it's safe!
-    // InputHandler depends on cardPack, so create it after cardPack
-    inputHandler = std::make_unique<InputHandler>(cardPack.get(), nullptr); // Pass the valid pointer
+
+    // Create CardPack after TextureManager and CardDatabase are ready
+    cardPack = std::make_unique<CardPack>();
+    std::cout << "CardPack created" << std::endl;
+
+    // Create InputHandler last since it depends on CardPack
+    inputHandler = std::make_unique<InputHandler>(cardPack.get(), nullptr);
+    std::cout << "InputHandler created" << std::endl;
 
     std::cout << "OpenGL-dependent components Initialized." << std::endl;
 

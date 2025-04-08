@@ -9,13 +9,21 @@
 
 class Mesh {
 public:
-	Mesh(std::string filename, bool keepLocalGeometry = false);
-	~Mesh() { release(); }
-	// Disallow copy, move, & assignment
-	Mesh(const Mesh& other) = delete;
-	Mesh& operator=(const Mesh& other) = delete;
-	Mesh(Mesh&& other) = delete;
-	Mesh& operator=(Mesh&& other) = delete;
+    // Default constructor for creating empty mesh
+    Mesh() : vao(0), vbuf(0), vcount(0) {}
+    
+    // Constructor from file
+    Mesh(std::string filename, bool keepLocalGeometry = false);
+    ~Mesh() { release(); }
+
+    // Initialize mesh with vertex data
+    void initialize(const std::vector<float>& vertexData, const std::vector<unsigned int>& indices);
+
+    // Disallow copy, move, & assignment
+    Mesh(const Mesh& other) = delete;
+    Mesh& operator=(const Mesh& other) = delete;
+    Mesh(Mesh&& other) = delete;
+    Mesh& operator=(Mesh&& other) = delete;
 
 	// Return the bounding box of this object
 	std::pair<glm::vec3, glm::vec3> boundingBox() const
@@ -23,6 +31,7 @@ public:
 
 	void load(std::string filename, bool keepLocalGeometry = false);
 	void draw();
+	void render() { draw(); } // Alias for draw() to maintain consistent naming
 
 	// Mesh vertex format
 	struct Vertex {

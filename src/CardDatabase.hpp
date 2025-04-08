@@ -30,8 +30,11 @@ private:
     const int REVERSE_CARDS = 2;
     const int SPECIAL_CARDS = 1;  // holo, ex, or full art
 
+    // Reference to TextureManager
+    TextureManager* textureManager;
+
 public:
-    CardDatabase();
+    CardDatabase(TextureManager* texManager);
     ~CardDatabase();
 
     void loadLocalDatabase();

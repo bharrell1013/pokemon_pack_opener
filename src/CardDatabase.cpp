@@ -3,8 +3,9 @@
 #include <random>
 #include <iostream>
 #include "json.hpp"
+#include "TextureManager.hpp"
 
-CardDatabase::CardDatabase() {
+CardDatabase::CardDatabase(TextureManager* texManager) : textureManager(texManager) {
     loadLocalDatabase();
 }
 
@@ -90,31 +91,31 @@ Card CardDatabase::generateNormalCard() {
     std::string pokemon = getRandomPokemon();
     // Find the Pokemon's type from the database
     std::string type = getPokemonType(pokemon);
-    return Card(pokemon, type, "normal");
+    return Card(pokemon, type, "normal", textureManager);
 }
 
 Card CardDatabase::generateReverseCard() {
     std::string pokemon = getRandomPokemon();
     std::string type = getPokemonType(pokemon);
-    return Card(pokemon, type, "reverse");
+    return Card(pokemon, type, "reverse", textureManager);
 }
 
 Card CardDatabase::generateHoloCard() {
     std::string pokemon = getRandomPokemon();
     std::string type = getPokemonType(pokemon);
-    return Card(pokemon, type, "holo");
+    return Card(pokemon, type, "holo", textureManager);
 }
 
 Card CardDatabase::generateExCard() {
     std::string pokemon = getRandomPokemon();
     std::string type = getPokemonType(pokemon);
-    return Card(pokemon, type, "ex");
+    return Card(pokemon, type, "ex", textureManager);
 }
 
 Card CardDatabase::generateFullArtCard() {
     std::string pokemon = getRandomPokemon();
     std::string type = getPokemonType(pokemon);
-    return Card(pokemon, type, "full art");
+    return Card(pokemon, type, "full art", textureManager);
 }
 
 std::string CardDatabase::getPokemonType(const std::string& pokemonName) {

@@ -11,33 +11,19 @@ private:
     std::map<std::string, GLuint> textureMap;
     GLuint cardShader;             // Shader program for cards
     GLuint holoShader;             // Special shader for holo effects
+    GLuint currentShader;          // Currently active shader
 
-    // Singleton instance
-    static TextureManager* instance;
-    
-    // Private constructor for singleton
-    TextureManager();
+    // Helper methods for shader compilation
+    GLuint createShaderProgram(const std::string& vertexPath, const std::string& fragmentPath);
+    std::string loadShaderSource(const std::string& path);
+    int getTypeValue(const std::string& type);
+    int getRarityValue(const std::string& rarity);
 
 public:
-    // Prevent copying
-    TextureManager(const TextureManager&) = delete;
-    TextureManager& operator=(const TextureManager&) = delete;
-    
+    TextureManager();
     ~TextureManager();
 
-    // Singleton access
-    static TextureManager& getInstance() {
-        if (!instance) {
-            instance = new TextureManager();
-        }
-        return *instance;
-    }
-
-    static void destroyInstance() {
-        delete instance;
-        instance = nullptr;
-    }
-
+    // Texture loading
     GLuint loadTexture(const std::string& filePath);
     GLuint getTexture(const std::string& textureName);
 
@@ -48,6 +34,7 @@ public:
     // Shader management
     void applyCardShader(const Card& card);
     void applyHoloShader(const Card& card, float time);
+    GLuint getCurrentShader() const { return currentShader; }
 
     // Initialize shaders
     void initializeShaders();

@@ -193,7 +193,52 @@ void Mesh::load(std::string filename, bool keepLocalGeometry) {
     if (!keepLocalGeometry)
         vertices.clear();
 }
+// Initialize mesh with vertex data and indices
+void Mesh::initialize(const std::vector<float>& vertexData, const std::vector<unsigned int>& indices) {
+    // Release any existing resources
+    release();
 
+    // Calculate number of vertices (3 floats for position + 2 for UV + 3 for normal = 8 floats per vertex)
+    vcount = static_cast<GLsizei>(vertexData.size() / 8);
+
+    // Create and bind VAO
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    // Create and bind VBO for vertex data
+    glGenBuffers(1, &vbuf);
+    glBindBuffer(GL_ARRAY_BUFFER, vbuf);
+    glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_STATIC_DRAW);
+
+    // Set up vertex attributes
+    // Position (3 floats)
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+
+    // Texture coordinates (2 floats)
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+
+    // Normals (3 floats)
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+
+    // If indices are provided, create and bind element buffer
+    if (!indices.empty()) {
+        GLuint ebo;
+        glGenBuffers(1, &ebo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+        vcount = static_cast<GLsizei>(indices.size());
+    }
+
+    // Unbind VAO and buffers
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+// Release resources
 // Release resources
 void Mesh::release() {
 	minBB = glm::vec3(std::numeric_limits<float>::max());

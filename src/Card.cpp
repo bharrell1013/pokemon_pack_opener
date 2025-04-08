@@ -1,11 +1,15 @@
 #include "Card.hpp"
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include "TextureManager.hpp"
+#include <freeglut_std.h>
 
-Card::Card(std::string name, std::string type, std::string rarity) :
+Card::Card(std::string name, std::string type, std::string rarity, TextureManager* texManager) :
     pokemonName(name),
     pokemonType(type),
     rarity(rarity),
     textureID(0),
+    textureManager(texManager),
     position(glm::vec3(0.0f, 0.0f, 0.0f)),
     rotation(glm::vec3(0.0f, 0.0f, 0.0f)),
     scale(glm::vec3(1.0f, 1.0f, 1.0f)),
@@ -28,6 +32,9 @@ Card::Card(std::string name, std::string type, std::string rarity) :
 
     // Initialize card mesh
     initializeMesh();
+    
+    // Load texture
+    loadTexture();
 }
 
 Card::~Card() {
@@ -40,26 +47,111 @@ Card::~Card() {
 void Card::loadTexture() {
     // Get texture path based on Pokemon type
     std::string texturePath = "textures/pokemon/" + pokemonName + ".png";
-    std::string cardTemplatePath = "textures/cards/template_" + pokemonType + ".png";
+    std::string cardTemplatePath = "textures/cards/card_template.png";
     
     // Try to load the Pokemon texture
     if (textureID == 0) {
         // First try to load specific Pokemon texture
-        textureID = TextureManager::getInstance().loadTexture(texturePath);
+        textureID = textureManager->loadTexture(texturePath);
         
         if (textureID == 0) {
-            // If specific texture not found, load default type template
-            textureID = TextureManager::getInstance().loadTexture(cardTemplatePath);
+            // If specific texture not found, load default template
+            textureID = textureManager->loadTexture(cardTemplatePath);
         }
         
         // Apply special effects based on rarity
         if (rarity == "holo" || rarity == "reverse" || rarity == "ex" || rarity == "full art") {
-            textureID = TextureManager::getInstance().generateHoloEffect(textureID, rarity);
+            textureID = textureManager->generateHoloEffect(textureID, rarity);
         }
     }
 }
 
+// Copy constructor
+Card::Card(const Card& other) :
+    pokemonName(other.pokemonName),
+    pokemonType(other.pokemonType),
+    rarity(other.rarity),
+    textureID(other.textureID),
+    position(other.position),
+    rotation(other.rotation),
+    scale(other.scale),
+    velocity(other.velocity),
+    shininess(other.shininess),
+    holoIntensity(other.holoIntensity),
+    revealProgress(other.revealProgress),
+    isRevealed(other.isRevealed)
+{
+    if (other.cardMesh) {
+        cardMesh = other.cardMesh; // Shared pointer will handle reference counting
+    }
+}
+
+// Copy assignment operator
+Card& Card::operator=(const Card& other) {
+    if (this != &other) {
+        pokemonName = other.pokemonName;
+        pokemonType = other.pokemonType;
+        rarity = other.rarity;
+        textureID = other.textureID;
+        position = other.position;
+        rotation = other.rotation;
+        scale = other.scale;
+        velocity = other.velocity;
+        shininess = other.shininess;
+        holoIntensity = other.holoIntensity;
+        revealProgress = other.revealProgress;
+        isRevealed = other.isRevealed;
+        cardMesh = other.cardMesh;
+    }
+    return *this;
+}
+
+// Move constructor
+Card::Card(Card&& other) noexcept :
+    pokemonName(std::move(other.pokemonName)),
+    pokemonType(std::move(other.pokemonType)),
+    rarity(std::move(other.rarity)),
+    textureID(other.textureID),
+    cardMesh(std::move(other.cardMesh)),
+    position(other.position),
+    rotation(other.rotation),
+    scale(other.scale),
+    velocity(other.velocity),
+    shininess(other.shininess),
+    holoIntensity(other.holoIntensity),
+    revealProgress(other.revealProgress),
+    isRevealed(other.isRevealed)
+{
+    other.textureID = 0;
+}
+
+// Move assignment operator
+Card& Card::operator=(Card&& other) noexcept {
+    if (this != &other) {
+        pokemonName = std::move(other.pokemonName);
+        pokemonType = std::move(other.pokemonType);
+        rarity = std::move(other.rarity);
+        textureID = other.textureID;
+        cardMesh = std::move(other.cardMesh);
+        position = other.position;
+        rotation = other.rotation;
+        scale = other.scale;
+        velocity = other.velocity;
+        shininess = other.shininess;
+        holoIntensity = other.holoIntensity;
+        revealProgress = other.revealProgress;
+        isRevealed = other.isRevealed;
+        
+        other.textureID = 0;
+    }
+    return *this;
+}
+
 void Card::render(const glm::mat4& viewProjection) {
+    if (!cardMesh) {
+        return;  // Skip if mesh isn't initialized
+    }
+
     // Create model matrix for the card
     glm::mat4 modelMatrix = glm::mat4(1.0f);
 
@@ -77,22 +169,33 @@ void Card::render(const glm::mat4& viewProjection) {
     // Calculate final transformation matrix
     glm::mat4 mvpMatrix = viewProjection * modelMatrix;
 
-    // Apply appropriate shader based on card rarity
+    // Apply appropriate shader based on card rarity first
     if (rarity == "holo" || rarity == "reverse" || rarity == "ex" || rarity == "full art") {
-        TextureManager::getInstance().applyHoloShader(*this, static_cast<float>(glfwGetTime()));
+        textureManager->applyHoloShader(*this, static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f);
     } else {
-        TextureManager::getInstance().applyCardShader(*this);
+        textureManager->applyCardShader(*this);
     }
 
     // Bind texture
     if (textureID != 0) {
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, textureID);
     }
 
-    // Render card quad
-    // This assumes we have a basic quad mesh set up
-    // You'll need to implement the actual rendering code here
-    // using your mesh system
+    // Set MVP matrix in current shader program
+    if (textureManager) {
+        GLuint shader = textureManager->getCurrentShader();
+        GLint mvpLoc = glGetUniformLocation(shader, "mvpMatrix"); // Changed uniform name to match shader
+        if (mvpLoc != -1) {
+            glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+        }
+    }
+
+    // Draw the card mesh
+    cardMesh->draw();
+
+    // Cleanup state
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Card::update(float deltaTime) {
@@ -111,7 +214,7 @@ void Card::update(float deltaTime) {
 
 void Card::initializeMesh() {
     // Create a new mesh for the card
-    cardMesh = std::make_unique<Mesh>();
+    cardMesh = std::make_shared<Mesh>();
 
     // Define card vertices (simple rectangle)
     std::vector<float> vertices = {
@@ -128,7 +231,7 @@ void Card::initializeMesh() {
         2, 3, 0
     };
 
-    // Initialize the mesh
+    // Initialize the mesh with our vertex data and indices
     cardMesh->initialize(vertices, indices);
 }
 

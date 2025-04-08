@@ -8,10 +8,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-// Initialize static member
-TextureManager* TextureManager::instance = nullptr;
-
-TextureManager::TextureManager() : cardShader(0), holoShader(0) {
+TextureManager::TextureManager() : cardShader(0), holoShader(0), currentShader(0) {
     initializeShaders();
 }
 
@@ -114,6 +111,7 @@ GLuint TextureManager::generateHoloEffect(GLuint baseTexture, const std::string&
 }
 
 void TextureManager::applyCardShader(const Card& card) {
+    currentShader = cardShader;
     glUseProgram(cardShader);
 
     // Set shader uniforms
@@ -129,6 +127,7 @@ void TextureManager::applyCardShader(const Card& card) {
 }
 
 void TextureManager::applyHoloShader(const Card& card, float time) {
+    currentShader = holoShader;
     glUseProgram(holoShader);
 
     // Set time uniform for animated effects

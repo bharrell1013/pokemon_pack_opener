@@ -1,15 +1,17 @@
 #include "CardPack.hpp"
+#include "TextureManager.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
-
-#include <filesystem> // Add this include at the top of the file
+#include <filesystem>
 #include <glm/gtc/type_ptr.hpp>
+#include <GL/freeglut_std.h>
 
-CardPack::CardPack() :
+CardPack::CardPack(TextureManager* texManager) :
     state(CLOSED),
     openingProgress(0.0f),
     position(glm::vec3(0.0f, 0.0f, 0.0f)),
-    rotation(glm::vec3(0.0f, 0.0f, 0.0f))
+    rotation(glm::vec3(0.0f, 0.0f, 0.0f)),
+    textureManager(texManager)
 {
     std::cout << "CardPack constructor: Attempting to load pack model..." << std::endl;
     std::string packModelPath = "models/pack.obj"; // Primary model
@@ -57,109 +59,105 @@ CardPack::~CardPack() {
     // Resources will be cleaned up by unique_ptr
 }
 
+// In CardPack::generateCards
 void CardPack::generateCards(CardDatabase& database) {
-    // We'll implement this later when the CardDatabase is implemented
     cards.clear();
+    cards.reserve(10); // Optional but good practice: reserve space upfront
 
-    // For now, just create empty cards for testing
-    for (int i = 0; i < 10; i++) {
-        cards.push_back(Card("Test Pokemon", "normal", (i < 7) ? "normal" :
-            (i < 9) ? "reverse" : "holo"));
+    const float Z_SPACING = 0.01f; // Small offset between cards
+
+    for (int i = 0; i < 10; ++i) {
+        std::string rarity = (i < 7) ? "normal" : (i < 9) ? "reverse" : "holo";
+
+        // Construct Card directly in the vector
+        cards.emplace_back("Test Pokemon", "normal", rarity, textureManager);
+
+        // Get a reference to the newly created card to set properties
+        Card& newCard = cards.back();
+
+        // Set card position - arrange in a grid
+        float x = (i % 3) * 1.2f - 1.2f;  // Was 1.5f
+        float y = (i / 3) * 1.5f - 1.5f;  // Was 2.0f and -2.0f offset
+        //float z = -i * Z_SPACING;
+        float z = -i * Z_SPACING * 100.0f; // Increase spacing significantly for visibility
+        //newCard.setPosition(glm::vec3(x, y, z));
+        newCard.setPosition(glm::vec3(x, 0.0f, z));
+
+        // Add some rotation for visual interest
+        newCard.setRotation(glm::vec3(0.0f, 0.0f, 0.0f));
+        newCard.setScale(glm::vec3(0.8f, 0.8f, 0.8f)); // <<< Add scaling (e.g., 80%)
     }
+    std::cout << "Cards generated using emplace_back. Vector size: " << cards.size() << std::endl; // Add logging
 }
 
-void CardPack::render(GLuint shaderProgramID) {
-    if (!packModel) return;
+// *** MODIFIED Signature ***
+// CardPack.cpp (render function only)
 
-    // Create model matrix for the pack
-    glm::mat4 modelMatrix = glm::mat4(1.0f);
+// *** MODIFIED Signature ***
+void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, GLuint packTextureID) {
+    if (!packModel && cards.empty()) return;
 
-    // Apply position
-    modelMatrix = glm::translate(modelMatrix, position);
+    // --- Render the Pack Model (if state is CLOSED) ---
+    if (packModel && state == CLOSED) {
+        // Use the PACK shader program (passed in)
+        // Application::render already set view/projection uniforms for this shader
+        glUseProgram(packShaderProgramID); // Redundant if Application::render called UseProgram just before this
 
-    // Apply rotation (in radians)
-    modelMatrix = glm::rotate(modelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
-    modelMatrix = glm::rotate(modelMatrix, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-    modelMatrix = glm::rotate(modelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+        // Create model matrix for the pack
+        glm::mat4 packModelMatrix = glm::mat4(1.0f);
+        packModelMatrix = glm::translate(packModelMatrix, position);
+        packModelMatrix = glm::rotate(packModelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
+        packModelMatrix = glm::rotate(packModelMatrix, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
+        packModelMatrix = glm::rotate(packModelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
 
-    // *** Get Uniform Location and Set MODEL Matrix ***
-    GLint modelLoc = glGetUniformLocation(shaderProgramID, "model");
-    if (modelLoc != -1) {
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+        // Set MODEL Matrix for the PACK shader
+        GLint modelLoc = glGetUniformLocation(packShaderProgramID, "model");
+        if (modelLoc != -1) {
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(packModelMatrix));
+        }
+        else {
+            std::cerr << "Warning: Uniform 'model' not found in pack shader program " << packShaderProgramID << std::endl;
+        }
+
+        // *** Setup Texture for the PACK shader ***
+        GLint texLoc = glGetUniformLocation(packShaderProgramID, "diffuseTexture");
+        if (texLoc != -1 && packTextureID != 0) {
+            glActiveTexture(GL_TEXTURE0); // Activate texture unit 0
+            glBindTexture(GL_TEXTURE_2D, packTextureID); // Bind the loaded pack texture
+            glUniform1i(texLoc, 0); // Tell sampler uniform to use texture unit 0
+        }
+        else {
+            if (texLoc == -1) std::cerr << "Warning: Uniform 'diffuseTexture' not found for pack shader." << std::endl;
+            if (packTextureID == 0) std::cerr << "Warning: packTextureID is 0 when trying to render pack." << std::endl;
+        }
+
+        // Render the pack model
+        packModel->draw();
+
+        // Unbind texture (good practice after drawing with it)
+        // Although Application::render will call glUseProgram(0) later,
+        // unbinding texture here is cleaner.
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
-    else {
-        // This warning should NOT appear if pack_v.glsl is compiled correctly
-        std::cerr << "Warning: Uniform 'model' not found in shader program " << shaderProgramID << std::endl;
-    }
 
-    // Set other uniforms if needed (e.g., shininess for pack_f.glsl)
-    GLint shinyLoc = glGetUniformLocation(shaderProgramID, "shininess");
-    if (shinyLoc != -1) {
-        glUniform1f(shinyLoc, 32.0f); // Example shininess value
-    }
-    else {
-        // std::cerr << "Warning: Uniform 'shininess' not found." << std::endl;
-    }
-    // Set light uniforms (example fixed values)
-   // GLint lightPosLoc = glGetUniformLocation(shaderProgramID, "lightPos");
-   // if (lightPosLoc != -1) glUniform3f(lightPosLoc, 1.0f, 1.0f, 2.0f);
-   // GLint lightColorLoc = glGetUniformLocation(shaderProgramID, "lightColor");
-   // if (lightColorLoc != -1) glUniform3f(lightColorLoc, 1.0f, 1.0f, 1.0f);
+    // --- Render Cards (using card/holo shaders) ---
+    if (state == OPENED || state == OPENING) {
+        // Optional: Hide or don't draw the pack model anymore once opening starts/finishes
 
-
-   // Render the pack model
-    packModel->draw();
-
-    // If the pack is opened or opening and progress is sufficient, render cards
-    if (state == OPENED || (state == OPENING /* && openingProgress > 0.5f */)) { // Render cards sooner?
-        // You'll need a loop here to render each card
-        // Each card might have its own model matrix
+        // Render all cards
         for (const auto& card : cards) {
-            // Calculate card's model matrix (similar to pack, using card.getPosition(), etc.)
-            glm::mat4 cardModelMatrix = glm::translate(glm::mat4(1.0f), card.getPosition());
-            // Add card rotation/scale...
-
-            // Set the model uniform *again* for this card
-            if (modelLoc != -1) {
-                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(cardModelMatrix));
+            // Apply appropriate CARD/HOLO shader
+            if (card.getRarity() == "holo" /* ... other conditions ... */) {
+                textureManager->applyHoloShader(card, static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f);
+            }
+            else {
+                textureManager->applyCardShader(card);
             }
 
-            // *** Bind appropriate texture for the card ***
-            // GLuint cardTex = textureManager->getTexture(card.getPokemonName()); // Or however you get it
-            // glActiveTexture(GL_TEXTURE0);
-            // glBindTexture(GL_TEXTURE_2D, cardTex);
-            // glUniform1i(texLoc, 0); // Make sure sampler uses unit 0
-
-            // Set other card-specific uniforms (e.g., holo intensity?)
-
-            // *** Draw the card geometry ***
-            // packModel->draw(); // Placeholder - you need card geometry
+            // Render the individual card, passing view and projection matrices separately
+            card.render(viewMatrix, projectionMatrix); // *** MODIFIED CALL ***
         }
     }
-
-    // Calculate final transformation matrix
-    //glm::mat4 mvpMatrix = viewProjection * modelMatrix;
-
-    //// If the pack is opening, apply transformations for the animation
-    //if (state == OPENING) {
-    //    // Simple animation for now - we'll enhance this later
-    //    // This will be replaced with proper vertex manipulation for tearing
-    //}
-
-    //GLint mvpLoc = glGetUniformLocation(shaderProgramID, "mvp");
-    //if (mvpLoc == -1) {
-    //    std::cerr << "Warning: Uniform 'mvp' not found in shader program " << shaderProgramID << std::endl;
-    //}
-    //else {
-    //    glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(mvpMatrix));
-    //}
-
-    //packModel->draw();
-
-    //// If the pack is opened or opening and progress is sufficient, render cards
-    //if (state == OPENED || (state == OPENING && openingProgress > 0.5f)) {
-    //    // We'll implement card rendering later
-    //}
 }
 
 void CardPack::update(float deltaTime) {

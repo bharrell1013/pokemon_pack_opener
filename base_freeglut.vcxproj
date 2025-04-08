@@ -184,9 +184,6 @@ xcopy "$(ProjectDir)textures" "$(OutDir)textures\" /Y /I /S /E</Command>
     <ClCompile Include="src\TextureManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Card.hpp" />
-    <ClInclude Include="CardDatabase.hpp" />
-    <ClInclude Include="CardPack.hpp" />
     <ClInclude Include="src/gl_core_3_3.h" />
     <ClInclude Include="src/mesh.hpp" />
     <ClInclude Include="src/util.hpp" />
@@ -198,7 +195,6 @@ xcopy "$(ProjectDir)textures" "$(OutDir)textures\" /Y /I /S /E</Command>
     <ClInclude Include="src\InputHandler.hpp" />
     <ClInclude Include="src\stb_image.h" />
     <ClInclude Include="src\TextureManager.hpp" />
-    <ClInclude Include="TextureManager.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders/v.glsl" />

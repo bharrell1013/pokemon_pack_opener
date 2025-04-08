@@ -2,7 +2,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "TextureManager.hpp"
-#include <freeglut_std.h>
+#include <GL/freeglut.h>
 
 Card::Card(std::string name, std::string type, std::string rarity, TextureManager* texManager) :
     pokemonName(name),
@@ -45,24 +45,33 @@ Card::~Card() {
 }
 
 void Card::loadTexture() {
-    // Get texture path based on Pokemon type
-    std::string texturePath = "textures/pokemon/" + pokemonName + ".png";
-    std::string cardTemplatePath = "textures/cards/card_template.png";
-    
-    // Try to load the Pokemon texture
+    // Check if we already have a texture loaded
+    if (textureID != 0) {
+        return;
+    }
+
+    // Try to get cached placeholder texture
+    textureID = textureManager->getTexture("textures/pokemon/placeholder.png");
+    if (textureID != 0) {
+        goto apply_effects;
+    }
+
+    // Try to load placeholder
+    textureID = textureManager->loadTexture("textures/pokemon/placeholder.png");
+    if (textureID != 0) {
+        goto apply_effects;
+    }
+
+    // As last resort, use card template
+    textureID = textureManager->getTexture("textures/cards/card_template.png");
     if (textureID == 0) {
-        // First try to load specific Pokemon texture
-        textureID = textureManager->loadTexture(texturePath);
-        
-        if (textureID == 0) {
-            // If specific texture not found, load default template
-            textureID = textureManager->loadTexture(cardTemplatePath);
-        }
-        
-        // Apply special effects based on rarity
-        if (rarity == "holo" || rarity == "reverse" || rarity == "ex" || rarity == "full art") {
-            textureID = textureManager->generateHoloEffect(textureID, rarity);
-        }
+        textureID = textureManager->loadTexture("textures/cards/card_template.png");
+    }
+
+apply_effects:
+    // Apply special effects based on rarity
+    if (textureID != 0 && (rarity == "holo" || rarity == "reverse" || rarity == "ex" || rarity == "full art")) {
+        textureID = textureManager->generateHoloEffect(textureID, rarity);
     }
 }
 
@@ -147,54 +156,63 @@ Card& Card::operator=(Card&& other) noexcept {
     return *this;
 }
 
-void Card::render(const glm::mat4& viewProjection) {
+// Card.cpp (render function only)
+
+#include <glm/gtc/type_ptr.hpp> // For glm::value_ptr
+#include <iostream> // For cerr
+
+// *** MODIFIED Signature ***
+void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix) const {
     if (!cardMesh) {
-        return;  // Skip if mesh isn't initialized
+        std::cerr << "Error: Card::render called with null cardMesh for " << pokemonName << std::endl;
+        return;
+    }
+    // Removed redundant textureID check log, keep behavior
+    if (textureID == 0) {
+        // Optionally render untextured or skip
+        // return;
     }
 
-    // Create model matrix for the card
+
+    // Get the currently active shader (set by TextureManager::apply*)
+    // Getting the shader doesn't modify the Card, so this is okay in a const method
+    GLuint currentShader = textureManager->getCurrentShader();
+    if (currentShader == 0) {
+        std::cerr << "Error: Card::render - current shader from TextureManager is 0." << std::endl;
+        return;
+    }
+
+    // --- Calculate Model Matrix --- (Reading members is okay in const)
     glm::mat4 modelMatrix = glm::mat4(1.0f);
-
-    // Apply position
     modelMatrix = glm::translate(modelMatrix, position);
-
-    // Apply rotation (in radians)
     modelMatrix = glm::rotate(modelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
     modelMatrix = glm::rotate(modelMatrix, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
     modelMatrix = glm::rotate(modelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
-
-    // Apply scale
     modelMatrix = glm::scale(modelMatrix, scale);
 
-    // Calculate final transformation matrix
-    glm::mat4 mvpMatrix = viewProjection * modelMatrix;
+    // --- Set Matrix Uniforms --- (OpenGL calls don't modify the C++ object)
+    GLint modelLoc = glGetUniformLocation(currentShader, "model");
+    GLint viewLoc = glGetUniformLocation(currentShader, "view");
+    GLint projLoc = glGetUniformLocation(currentShader, "projection");
 
-    // Apply appropriate shader based on card rarity first
-    if (rarity == "holo" || rarity == "reverse" || rarity == "ex" || rarity == "full art") {
-        textureManager->applyHoloShader(*this, static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f);
-    } else {
-        textureManager->applyCardShader(*this);
-    }
+    if (modelLoc != -1) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+    if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+    if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
-    // Bind texture
-    if (textureID != 0) {
+    // --- Set Texture Uniform --- (OpenGL calls don't modify the C++ object)
+    GLint texSamplerLoc = glGetUniformLocation(currentShader, "cardTexture");
+    if (texSamplerLoc != -1) {
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textureID);
+        glBindTexture(GL_TEXTURE_2D, textureID); // Reading textureID is okay
+        glUniform1i(texSamplerLoc, 0);
     }
 
-    // Set MVP matrix in current shader program
-    if (textureManager) {
-        GLuint shader = textureManager->getCurrentShader();
-        GLint mvpLoc = glGetUniformLocation(shader, "mvpMatrix"); // Changed uniform name to match shader
-        if (mvpLoc != -1) {
-            glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(mvpMatrix));
-        }
-    }
-
-    // Draw the card mesh
+    // --- Draw the Card Mesh ---
+    // cardMesh is a unique_ptr. Accessing via -> calls Mesh::draw()
+    // We need Mesh::draw() to be const too! (See below)
     cardMesh->draw();
 
-    // Cleanup state
+    // --- Clean up ---
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -205,8 +223,16 @@ void Card::update(float deltaTime) {
     }
 
     // Physics update
-    position += velocity * deltaTime;
-    velocity *= 0.98f; // Damping
+    //position += velocity * deltaTime;
+    //velocity *= 0.98f; // Damping
+
+    // -- - ADD CONTINUOUS ROTATION(or other idle animation) HERE-- -
+        // This will run *after* the reveal animation is complete.
+        if (isRevealed) { // Only apply continuous rotation after reveal
+            rotation.y += deltaTime * 0.5f; // Rotate around Y axis continuously
+            // Keep rotation within 0-2PI range to avoid large numbers (optional)
+            // rotation.y = fmod(rotation.y, 2.0f * glm::pi<float>());
+        }
 
     // Update transform
     updateTransform();

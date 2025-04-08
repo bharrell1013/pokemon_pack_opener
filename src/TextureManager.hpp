@@ -4,7 +4,9 @@
 #include "gl_core_3_3.h"
 #include <map>
 #include <string>
-#include "Card.hpp"
+
+// Forward declaration
+class Card;
 
 class TextureManager {
 private:

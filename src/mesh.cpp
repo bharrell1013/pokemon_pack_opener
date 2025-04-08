@@ -21,10 +21,24 @@ Mesh::Mesh(std::string filename, bool keepLocalGeometry) {
 }
 
 // Draw the mesh
-void Mesh::draw() {
-	glBindVertexArray(vao);
-	glDrawArrays(GL_TRIANGLES, 0, vcount);
-	glBindVertexArray(0);
+void Mesh::draw() const { // Keep const
+    if (vao == 0 || vbuf == 0 || vcount == 0) {
+        // Don't try to draw if buffers aren't set up or vertex count is zero
+        // std::cerr << "Warning: Mesh::draw() called on uninitialized or empty mesh." << std::endl; // Optional warning
+        return;
+    }
+
+    glBindVertexArray(vao); // Bind the VAO containing buffer and attribute pointers
+
+    // Use glDrawArrays because the 'load' function prepares non-indexed data
+    if (ebo != 0) { // If the member variable ebo is valid, use indexed drawing
+        glDrawElements(GL_TRIANGLES, vcount, GL_UNSIGNED_INT, 0);
+    }
+    else { // Otherwise, use non-indexed drawing (like for OBJ files loaded via Mesh::load)
+        glDrawArrays(GL_TRIANGLES, 0, vcount);
+    }
+
+    glBindVertexArray(0); // Unbind the VAO
 }
 
 // Load a wavefront OBJ file
@@ -225,11 +239,14 @@ void Mesh::initialize(const std::vector<float>& vertexData, const std::vector<un
 
     // If indices are provided, create and bind element buffer
     if (!indices.empty()) {
-        GLuint ebo;
+        //GLuint ebo;
         glGenBuffers(1, &ebo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
         vcount = static_cast<GLsizei>(indices.size());
+    }
+    else {
+        ebo = 0;
     }
 
     // Unbind VAO and buffers
@@ -247,6 +264,7 @@ void Mesh::release() {
 	vertices.clear();
 	if (vao) { glDeleteVertexArrays(1, &vao); vao = 0; }
 	if (vbuf) { glDeleteBuffers(1, &vbuf); vbuf = 0; }
+    if (ebo) { glDeleteBuffers(1, &ebo); ebo = 0; }
 	vcount = 0;
 }
 

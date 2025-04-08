@@ -6,6 +6,9 @@
 #include <string>
 #include "Card.hpp"
 
+// Forward declaration
+class TextureManager;
+
 struct PokemonData {
     int id;
     std::string name;

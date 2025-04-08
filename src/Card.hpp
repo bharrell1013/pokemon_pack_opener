@@ -7,6 +7,9 @@
 #include <memory>
 #include "mesh.hpp"
 
+// Forward declaration
+class TextureManager;
+
 class Card {
 private:
     std::string pokemonName;
@@ -48,7 +51,7 @@ public:
     Card& operator=(Card&& other) noexcept;
 
     void loadTexture();
-    void render(const glm::mat4& viewProjection);
+    void render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix) const;
     void update(float deltaTime);
     
     // Animation controls

@@ -6,6 +6,10 @@
 #include "mesh.hpp"
 #include "CardDatabase.hpp"
 #include <memory>
+#include <glm/glm.hpp> // Include glm
+
+// Forward declaration
+class TextureManager;
 
 enum OpeningState {
     CLOSED,
@@ -15,21 +19,23 @@ enum OpeningState {
 
 class CardPack {
 private:
-    std::vector<Card> cards;       // 10 cards per pack
-    std::unique_ptr<Mesh> packModel;  // 3D model of the pack
-    OpeningState state;            // CLOSED, OPENING, OPENED
-    float openingProgress;         // Animation progress (0.0-1.0)
+    std::vector<Card> cards;      // 10 cards per pack
+    std::unique_ptr<Mesh> packModel; // 3D model of the pack
+    OpeningState state;           // CLOSED, OPENING, OPENED
+    TextureManager* textureManager; // Non-owning pointer to TextureManager
+    float openingProgress;        // Animation progress (0.0-1.0)
 
     // Pack properties
     glm::vec3 position;
     glm::vec3 rotation;
 
 public:
-    CardPack();
+    CardPack(TextureManager* texManager);
     ~CardPack();
 
     void generateCards(CardDatabase& database);
-    void render(GLuint shaderProgramID);
+    // *** MODIFIED Signature ***
+    void render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, GLuint packTextureID);
     void update(float deltaTime);
     void startOpeningAnimation();
     bool isOpeningComplete() const;

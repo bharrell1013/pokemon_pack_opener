@@ -30,7 +30,7 @@ public:
 	{ return std::make_pair(minBB, maxBB); }
 
 	void load(std::string filename, bool keepLocalGeometry = false);
-	void draw();
+	void draw() const;
 	void render() { draw(); } // Alias for draw() to maintain consistent naming
 
 	// Mesh vertex format
@@ -53,6 +53,7 @@ protected:
 	GLuint vao;		// Vertex array object
 	GLuint vbuf;	// Vertex buffer
 	GLsizei vcount;	// Number of vertices
+	GLuint ebo = 0; // Element Buffer Object ID (0 if not used)
 
 private:
 };

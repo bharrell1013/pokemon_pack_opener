@@ -51,7 +51,7 @@ GLuint TextureManager::loadTexture(const std::string& filePath) {
     // Load image
     int width, height, channels;
     // Ensure vertical flip matches OpenGL's texture coordinate system if needed
-    // stbi_set_flip_vertically_on_load(true); // Uncomment if textures are upside down
+    stbi_set_flip_vertically_on_load(true); // Uncomment if textures are upside down
     unsigned char* data = stbi_load(filePath.c_str(), &width, &height, &channels, 0);
     if (!data) {
         std::cerr << "Failed to load texture: " << filePath << std::endl;
@@ -142,7 +142,8 @@ GLuint TextureManager::getTexture(const std::string& textureName) {
 // --- generateCardTexture, generateHoloEffect remain the same ---
 GLuint TextureManager::generateCardTexture(const Card& card) {
     // Create texture path based on Pokemon type
-    std::string templatePath = "textures/cards/template_" + card.getPokemonType() + ".png";
+    //std::string templatePath = "textures/cards/template_" + card.getPokemonType() + ".png";
+    std::string templatePath = "textures/cards/card_template.png";
     std::string pokemonPath = "textures/pokemon/" + card.getPokemonName() + ".png";
 
     // Try to load Pokemon-specific texture first
@@ -322,6 +323,9 @@ void TextureManager::initializeShaders() {
         std::cerr << "Failed to create holo shader program!" << std::endl;
     }
     std::cout << "Shader initialization finished." << std::endl;
+    std::cout << "[DEBUG] TextureManager::initializeShaders() - this: " << this
+        << ", cardShader ID: " << cardShader
+        << ", holoShader ID: " << holoShader << std::endl;
 }
 
 

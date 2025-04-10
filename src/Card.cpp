@@ -1,140 +1,113 @@
 #include "Card.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/compatibility.hpp> // For lerp (mix)
 #include "TextureManager.hpp"
 #include <GL/freeglut.h>
+#include <iostream> // For debugging
 
+// --- Constructor ---
 Card::Card(std::string name, std::string type, std::string rarity, TextureManager* texManager) :
     pokemonName(name),
     pokemonType(type),
     rarity(rarity),
     textureID(0),
     textureManager(texManager),
-    position(glm::vec3(0.0f, 0.0f, 0.0f)),
-    rotation(glm::vec3(0.0f, 0.0f, 0.0f)),
-    scale(glm::vec3(1.0f, 1.0f, 1.0f)),
-    velocity(glm::vec3(0.0f, 0.0f, 0.0f)),
-    shininess(0.5f),
-    holoIntensity(0.0f),
-    revealProgress(0.0f),
-    isRevealed(false)
+    position(glm::vec3(0.0f)),
+    rotation(glm::vec3(0.0f)),
+    scale(glm::vec3(1.0f)),
+    targetPosition(glm::vec3(0.0f)), // Initialize targets
+    targetRotation(glm::vec3(0.0f)),
+    targetScale(glm::vec3(1.0f)),
+    isAnimating(false),                // Start not animating
+    // velocity(glm::vec3(0.0f)), // Removed
+    shininess(0.5f), // Keep if used by shaders eventually
+    holoIntensity(0.0f), // Keep if used by shaders eventually
+    revealProgress(0.0f), // Potentially remove
+    isRevealed(false)      // Potentially remove
 {
-    // Set holoIntensity based on rarity
-    if (rarity == "holo") {
-        holoIntensity = 0.7f;
-    }
-    else if (rarity == "reverse") {
-        holoIntensity = 0.4f;
-    }
-    else if (rarity == "ex" || rarity == "full art") {
-        holoIntensity = 0.9f;
-    }
-
-    // Initialize card mesh
     initializeMesh();
-    
-    // Load texture
-    loadTexture();
+    loadTexture(); // Load texture after mesh is potentially initialized
+    targetPosition = position; // Initial target is current position
+    targetRotation = rotation;
+    targetScale = scale;
 }
 
 Card::~Card() {
-    // Cleanup texture if needed
-    if (textureID != 0) {
-        glDeleteTextures(1, &textureID);
-    }
+    // glDeleteTextures(1, &textureID); // TextureManager should handle this
 }
 
-void Card::loadTexture() {
-    // Check if we already have a texture loaded
-    if (textureID != 0) {
-        return;
-    }
-
-    // Try to get cached placeholder texture
-    textureID = textureManager->getTexture("textures/pokemon/placeholder.png");
-    if (textureID != 0) {
-        goto apply_effects;
-    }
-
-    // Try to load placeholder
-    textureID = textureManager->loadTexture("textures/pokemon/placeholder.png");
-    if (textureID != 0) {
-        goto apply_effects;
-    }
-
-    // As last resort, use card template
-    textureID = textureManager->getTexture("textures/cards/card_template.png");
-    if (textureID == 0) {
-        textureID = textureManager->loadTexture("textures/cards/card_template.png");
-    }
-
-apply_effects:
-    // Apply special effects based on rarity
-    if (textureID != 0 && (rarity == "holo" || rarity == "reverse" || rarity == "ex" || rarity == "full art")) {
-        textureID = textureManager->generateHoloEffect(textureID, rarity);
-    }
-}
-
-// Copy constructor
+// --- Copy Constructor --- (Update for new members)
 Card::Card(const Card& other) :
     pokemonName(other.pokemonName),
     pokemonType(other.pokemonType),
     rarity(other.rarity),
-    textureID(other.textureID),
+    textureID(other.textureID), // Texture Manager owns texture, just copy ID
+    cardMesh(other.cardMesh),   // Share the mesh pointer
+    textureManager(other.textureManager),
     position(other.position),
     rotation(other.rotation),
     scale(other.scale),
-    velocity(other.velocity),
+    targetPosition(other.targetPosition),
+    targetRotation(other.targetRotation),
+    targetScale(other.targetScale),
+    isAnimating(other.isAnimating),
     shininess(other.shininess),
     holoIntensity(other.holoIntensity),
     revealProgress(other.revealProgress),
     isRevealed(other.isRevealed)
 {
-    if (other.cardMesh) {
-        cardMesh = other.cardMesh; // Shared pointer will handle reference counting
-    }
 }
 
-// Copy assignment operator
+// --- Copy Assignment --- (Update for new members)
 Card& Card::operator=(const Card& other) {
     if (this != &other) {
         pokemonName = other.pokemonName;
         pokemonType = other.pokemonType;
         rarity = other.rarity;
         textureID = other.textureID;
+        cardMesh = other.cardMesh;
+        textureManager = other.textureManager;
         position = other.position;
         rotation = other.rotation;
         scale = other.scale;
-        velocity = other.velocity;
+        targetPosition = other.targetPosition;
+        targetRotation = other.targetRotation;
+        targetScale = other.targetScale;
+        isAnimating = other.isAnimating;
         shininess = other.shininess;
         holoIntensity = other.holoIntensity;
         revealProgress = other.revealProgress;
         isRevealed = other.isRevealed;
-        cardMesh = other.cardMesh;
     }
     return *this;
 }
 
-// Move constructor
+// --- Move Constructor --- (Update for new members)
 Card::Card(Card&& other) noexcept :
     pokemonName(std::move(other.pokemonName)),
     pokemonType(std::move(other.pokemonType)),
     rarity(std::move(other.rarity)),
     textureID(other.textureID),
     cardMesh(std::move(other.cardMesh)),
+    textureManager(other.textureManager),
     position(other.position),
     rotation(other.rotation),
     scale(other.scale),
-    velocity(other.velocity),
+    targetPosition(other.targetPosition),
+    targetRotation(other.targetRotation),
+    targetScale(other.targetScale),
+    isAnimating(other.isAnimating),
     shininess(other.shininess),
     holoIntensity(other.holoIntensity),
     revealProgress(other.revealProgress),
     isRevealed(other.isRevealed)
 {
-    other.textureID = 0;
+    other.textureID = 0; // Prevent double deletion if Card destructor managed it
+    other.textureManager = nullptr;
 }
 
-// Move assignment operator
+// --- Move Assignment --- (Update for new members)
 Card& Card::operator=(Card&& other) noexcept {
     if (this != &other) {
         pokemonName = std::move(other.pokemonName);
@@ -142,47 +115,124 @@ Card& Card::operator=(Card&& other) noexcept {
         rarity = std::move(other.rarity);
         textureID = other.textureID;
         cardMesh = std::move(other.cardMesh);
+        textureManager = other.textureManager;
         position = other.position;
         rotation = other.rotation;
         scale = other.scale;
-        velocity = other.velocity;
+        targetPosition = other.targetPosition;
+        targetRotation = other.targetRotation;
+        targetScale = other.targetScale;
+        isAnimating = other.isAnimating;
         shininess = other.shininess;
         holoIntensity = other.holoIntensity;
         revealProgress = other.revealProgress;
         isRevealed = other.isRevealed;
-        
+
         other.textureID = 0;
+        other.textureManager = nullptr;
     }
     return *this;
 }
 
-// Card.cpp (render function only)
+// --- loadTexture (Keep Existing) ---
+void Card::loadTexture() {
+    // Check if we already have a texture loaded
+    if (textureID != 0) { return; }
 
-#include <glm/gtc/type_ptr.hpp> // For glm::value_ptr
-#include <iostream> // For cerr
+    // Try to generate the specific texture using TextureManager logic
+    // This function should handle fallback internally now
+    textureID = textureManager->generateCardTexture(*this);
 
-// *** MODIFIED Signature ***
+    if (textureID == 0) {
+        std::cerr << "Error: Card::loadTexture failed to get any texture ID for " << pokemonName << std::endl;
+        // Attempt to load a default placeholder as a last resort
+        textureID = textureManager->loadTexture("textures/pokemon/placeholder.png");
+        if (textureID == 0) {
+            std::cerr << "FATAL: Could not load even the default placeholder texture!" << std::endl;
+            // Consider throwing or handling this critical failure
+        }
+    }
+    // Holo effect application might be better handled just before rendering
+    // based on the shader chosen, rather than modifying the textureID here.
+    // if (textureID != 0 && (rarity == "holo" || rarity == "reverse" || rarity == "ex" || rarity == "full art")) {
+    //     // textureID = textureManager->generateHoloEffect(textureID, rarity); // Revisit this if FBOs are used
+    // }
+}
+
+// --- setTargetTransform ---
+void Card::setTargetTransform(const glm::vec3& pos, const glm::vec3& rot, const glm::vec3& scl) {
+    targetPosition = pos;
+    targetRotation = rot;
+    targetScale = scl;
+    // Start animating only if the target is different from the current state
+    if (glm::distance(position, targetPosition) > 0.001f ||
+        glm::distance(rotation, targetRotation) > 0.001f || // Approx compare angles
+        glm::distance(scale, targetScale) > 0.001f)
+    {
+        isAnimating = true;
+    }
+    else {
+        isAnimating = false; // Already at target
+    }
+}
+
+// --- update ---
+void Card::update(float deltaTime) {
+    if (isAnimating) {
+        float animationSpeed = 8.0f; // Or get from CardPack if needed
+        float lerpFactor = glm::clamp(deltaTime * animationSpeed, 0.0f, 1.0f);
+
+        // Interpolate position, rotation, scale
+        position = glm::mix(position, targetPosition, lerpFactor);
+        rotation = glm::mix(rotation, targetRotation, lerpFactor); // Simple lerp for angles (can jitter at 180 deg flips, use slerp for perfection)
+        scale = glm::mix(scale, targetScale, lerpFactor);
+
+        // Check if close enough to target
+        const float threshold = 0.01f; // Adjust threshold as needed
+        if (glm::distance(position, targetPosition) < threshold &&
+            glm::distance(rotation, targetRotation) < threshold && // Angle check is approximate
+            glm::distance(scale, targetScale) < threshold)
+        {
+            position = targetPosition; // Snap to final target
+            rotation = targetRotation;
+            scale = targetScale;
+            isAnimating = false;      // Stop animating
+            // std::cout << "Card " << pokemonName << " finished animating." << std::endl;
+        }
+    }
+    // Remove old continuous rotation logic if present
+}
+
+// --- render (Mostly Unchanged, uses current position/rotation/scale) ---
 void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix) const {
     if (!cardMesh) {
         std::cerr << "Error: Card::render called with null cardMesh for " << pokemonName << std::endl;
         return;
     }
-    // Removed redundant textureID check log, keep behavior
+    //std::cout << "[DEBUG] Card::render() for " << pokemonName
+    //    << " - textureManager ptr: " << textureManager;
+    /*if (textureManager) {
+        std::cout << ", currentShader via getter: " << textureManager->getCurrentShader() << std::endl;
+    }
+    else {
+        std::cout << ", textureManager is NULL!" << std::endl;
+    }*/
     if (textureID == 0) {
-        // Optionally render untextured or skip
+        // Maybe render a default color or skip?
+        // std::cerr << "Warning: Rendering card " << pokemonName << " with textureID 0." << std::endl;
         // return;
     }
 
-
-    // Get the currently active shader (set by TextureManager::apply*)
-    // Getting the shader doesn't modify the Card, so this is okay in a const method
+    // Get the currently active shader (set by CardPack::render via TextureManager)
     GLuint currentShader = textureManager->getCurrentShader();
     if (currentShader == 0) {
-        std::cerr << "Error: Card::render - current shader from TextureManager is 0." << std::endl;
+        std::cerr << "Error: Card::render - current shader from TextureManager is 0 for " << pokemonName << std::endl;
         return;
     }
+    // Already checked shader validity in CardPack::render, but double check doesn't hurt
+    // glUseProgram(currentShader); // Should already be bound by CardPack::render
 
-    // --- Calculate Model Matrix --- (Reading members is okay in const)
+   // Calculate Model Matrix using current interpolated values
     glm::mat4 modelMatrix = glm::mat4(1.0f);
     modelMatrix = glm::translate(modelMatrix, position);
     modelMatrix = glm::rotate(modelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -190,7 +240,7 @@ void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix
     modelMatrix = glm::rotate(modelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
     modelMatrix = glm::scale(modelMatrix, scale);
 
-    // --- Set Matrix Uniforms --- (OpenGL calls don't modify the C++ object)
+    // Set Matrix Uniforms
     GLint modelLoc = glGetUniformLocation(currentShader, "model");
     GLint viewLoc = glGetUniformLocation(currentShader, "view");
     GLint projLoc = glGetUniformLocation(currentShader, "projection");
@@ -198,100 +248,48 @@ void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix
     if (modelLoc != -1) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
     if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
     if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    // else { std::cerr << "Warning: Matrix uniform not found..." << std::endl; }
 
-    // --- Set Texture Uniform --- (OpenGL calls don't modify the C++ object)
+    // Set Texture Uniform
     GLint texSamplerLoc = glGetUniformLocation(currentShader, "cardTexture");
     if (texSamplerLoc != -1) {
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textureID); // Reading textureID is okay
+        glBindTexture(GL_TEXTURE_2D, textureID);
         glUniform1i(texSamplerLoc, 0);
     }
+    // else { std::cerr << "Warning: cardTexture uniform not found..." << std::endl; }
 
     // --- Draw the Card Mesh ---
-    // cardMesh is a unique_ptr. Accessing via -> calls Mesh::draw()
-    // We need Mesh::draw() to be const too! (See below)
     cardMesh->draw();
 
     // --- Clean up ---
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture
 }
 
-void Card::update(float deltaTime) {
-    // Update reveal animation if in progress
-    if (!isRevealed) {
-        updateRevealAnimation(deltaTime);
-    }
-
-    // Physics update
-    //position += velocity * deltaTime;
-    //velocity *= 0.98f; // Damping
-
-    // -- - ADD CONTINUOUS ROTATION(or other idle animation) HERE-- -
-        // This will run *after* the reveal animation is complete.
-        if (isRevealed) { // Only apply continuous rotation after reveal
-            rotation.y += deltaTime * 0.5f; // Rotate around Y axis continuously
-            // Keep rotation within 0-2PI range to avoid large numbers (optional)
-            // rotation.y = fmod(rotation.y, 2.0f * glm::pi<float>());
-        }
-
-    // Update transform
-    updateTransform();
-}
-
+// --- initializeMesh (Keep Existing) ---
 void Card::initializeMesh() {
-    // Create a new mesh for the card
     cardMesh = std::make_shared<Mesh>();
-
-    // Define card vertices (simple rectangle)
+    // Apply scale factor directly to dimensions or handle via setScale
+    float w = 2.5f / 2.0f; // Half width
+    float h = 3.5f / 2.0f; // Half height
     std::vector<float> vertices = {
-        // Positions          // Texture coords  // Normals
-        -CARD_WIDTH/2, -CARD_HEIGHT/2, 0.0f,    0.0f, 0.0f,    0.0f, 0.0f, 1.0f,
-         CARD_WIDTH/2, -CARD_HEIGHT/2, 0.0f,    1.0f, 0.0f,    0.0f, 0.0f, 1.0f,
-         CARD_WIDTH/2,  CARD_HEIGHT/2, 0.0f,    1.0f, 1.0f,    0.0f, 0.0f, 1.0f,
-        -CARD_WIDTH/2,  CARD_HEIGHT/2, 0.0f,    0.0f, 1.0f,    0.0f, 0.0f, 1.0f
+        // Positions   // Texture coords  // Normals (Ensure they face +Z if card starts facing camera)
+        -w, -h, 0.0f,    0.0f, 0.0f,    0.0f, 0.0f, 1.0f,
+         w, -h, 0.0f,    1.0f, 0.0f,    0.0f, 0.0f, 1.0f,
+         w,  h, 0.0f,    1.0f, 1.0f,    0.0f, 0.0f, 1.0f,
+        -w,  h, 0.0f,    0.0f, 1.0f,    0.0f, 0.0f, 1.0f
     };
-
-    // Define indices for triangles
-    std::vector<unsigned int> indices = {
-        0, 1, 2,
-        2, 3, 0
-    };
-
-    // Initialize the mesh with our vertex data and indices
+    std::vector<unsigned int> indices = { 0, 1, 2, 2, 3, 0 };
     cardMesh->initialize(vertices, indices);
 }
 
-void Card::startRevealAnimation() {
-    revealProgress = 0.0f;
-    isRevealed = false;
-}
-
-void Card::updateRevealAnimation(float deltaTime) {
-    if (!isRevealed) {
-        revealProgress += deltaTime;
-        if (revealProgress >= 1.0f) {
-            revealProgress = 1.0f;
-            isRevealed = true;
-        }
-
-        // Update rotation based on reveal progress
-        float revealAngle = (1.0f - revealProgress) * glm::pi<float>();
-        rotation.y = revealAngle;
-    }
-}
-
-void Card::updateTransform() {
-    // This will be called whenever position, rotation, or scale changes
-    // The actual transformation matrix is computed in the render function
-}
-
-// Getters and setters
+// --- Getters/Setters ---
 std::string Card::getPokemonName() const { return pokemonName; }
 std::string Card::getPokemonType() const { return pokemonType; }
 std::string Card::getRarity() const { return rarity; }
-
 void Card::setPosition(const glm::vec3& pos) { position = pos; }
 glm::vec3 Card::getPosition() const { return position; }
 void Card::setRotation(const glm::vec3& rot) { rotation = rot; }
+//glm::vec3 Card::getRotation() const { return rotation; } // Add getter for rotation
 void Card::setScale(const glm::vec3& s) { scale = s; }
-void Card::setVelocity(const glm::vec3& vel) { velocity = vel; }
+// void Card::setVelocity(const glm::vec3& vel) { velocity = vel; } // Removed

@@ -7,11 +7,17 @@
 #include <GL/freeglut_std.h>
 
 CardPack::CardPack(TextureManager* texManager) :
-    state(CLOSED),
-    openingProgress(0.0f),
-    position(glm::vec3(0.0f, 0.0f, 0.0f)),
-    rotation(glm::vec3(0.0f, 0.0f, 0.0f)),
-    textureManager(texManager)
+    state(CLOSED), // Start closed
+    textureManager(texManager),
+    currentCardIndex(0),
+    stackCenter(0.0f, 0.0f, 0.0f),   // Stack cards around the origin
+    frontPosition(0.0f, 0.0f, 1.5f), // Position the front card closer to camera
+    backPositionOffset(0.0f, 0.0f, -0.5f), // How far back the cycled card goes relative to stack end
+    stackSpacing(0.05f),           // Very small Z spacing for the stack
+    animationSpeed(8.0f),            // Speed of card movement (adjust as needed)
+    isAnimating(false),              // Global pack animation flag (optional)
+    position(glm::vec3(0.0f)),     // Initial pack model position
+    rotation(glm::vec3(0.0f))      // Initial pack model rotation
 {
     std::cout << "CardPack constructor: Attempting to load pack model..." << std::endl;
     std::string packModelPath = "models/pack.obj"; // Primary model
@@ -62,143 +68,232 @@ CardPack::~CardPack() {
 // In CardPack::generateCards
 void CardPack::generateCards(CardDatabase& database) {
     cards.clear();
-    cards.reserve(10); // Optional but good practice: reserve space upfront
+    int numCards = 10; // Or get from database settings
+    cards.reserve(numCards);
 
-    const float Z_SPACING = 0.01f; // Small offset between cards
+    glm::vec3 initialScale(0.8f, 0.8f, 0.8f); // Use consistent scale
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < numCards; ++i) {
+        // Determine rarity (example logic)
         std::string rarity = (i < 7) ? "normal" : (i < 9) ? "reverse" : "holo";
+        // Get actual card data from database eventually
+        cards.emplace_back("Pokemon " + std::to_string(i + 1), "normal", rarity, textureManager);
 
-        // Construct Card directly in the vector
-        cards.emplace_back("Test Pokemon", "normal", rarity, textureManager);
-
-        // Get a reference to the newly created card to set properties
         Card& newCard = cards.back();
 
-        // Set card position - arrange in a grid
-        float x = (i % 3) * 1.2f - 1.2f;  // Was 1.5f
-        float y = (i / 3) * 1.5f - 1.5f;  // Was 2.0f and -2.0f offset
-        //float z = -i * Z_SPACING;
-        float z = -i * Z_SPACING * 100.0f; // Increase spacing significantly for visibility
-        //newCard.setPosition(glm::vec3(x, y, z));
-        newCard.setPosition(glm::vec3(x, 0.0f, z));
+        // Calculate initial position in the stack
+        float zPos = stackCenter.z - i * stackSpacing;
+        glm::vec3 initialPos = glm::vec3(stackCenter.x, stackCenter.y, zPos);
 
-        // Add some rotation for visual interest
-        newCard.setRotation(glm::vec3(0.0f, 0.0f, 0.0f));
-        newCard.setScale(glm::vec3(0.8f, 0.8f, 0.8f)); // <<< Add scaling (e.g., 80%)
+        newCard.setPosition(initialPos);
+        newCard.setRotation(glm::vec3(0.0f, glm::radians(180.0f), 0.0f)); // Start facing away? Or towards (0 rad)
+        newCard.setScale(initialScale);
+
+        // Set initial target to its starting position (no animation yet)
+        newCard.setTargetTransform(initialPos, newCard.getRotation(), initialScale); // Use getRotation()
     }
-    std::cout << "Cards generated using emplace_back. Vector size: " << cards.size() << std::endl; // Add logging
+    currentCardIndex = 0; // Reset index
+    state =  CLOSED; // Ensure state is reset if regenerating
+    std::cout << "Cards generated for stack. Vector size: " << cards.size() << std::endl;
 }
 
 // *** MODIFIED Signature ***
 // CardPack.cpp (render function only)
 
-// *** MODIFIED Signature ***
+// --- render ---
 void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, GLuint packTextureID) {
-    if (!packModel && cards.empty()) return;
+    if (state == CLOSED) {
+        // --- Render the Pack Model --- (Keep Existing Logic)
+        if (packModel) {
+            glUseProgram(packShaderProgramID);
 
-    // --- Render the Pack Model (if state is CLOSED) ---
-    if (packModel && state == CLOSED) {
-        // Use the PACK shader program (passed in)
-        // Application::render already set view/projection uniforms for this shader
-        glUseProgram(packShaderProgramID); // Redundant if Application::render called UseProgram just before this
+            glm::mat4 packModelMatrix = glm::mat4(1.0f);
+            packModelMatrix = glm::translate(packModelMatrix, position);
+            packModelMatrix = glm::rotate(packModelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
+            packModelMatrix = glm::rotate(packModelMatrix, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
+            packModelMatrix = glm::rotate(packModelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+            // Add scaling if pack model needs it
+           // packModelMatrix = glm::scale(packModelMatrix, glm::vec3(0.5f));
 
-        // Create model matrix for the pack
-        glm::mat4 packModelMatrix = glm::mat4(1.0f);
-        packModelMatrix = glm::translate(packModelMatrix, position);
-        packModelMatrix = glm::rotate(packModelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
-        packModelMatrix = glm::rotate(packModelMatrix, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-        packModelMatrix = glm::rotate(packModelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+            GLint modelLoc = glGetUniformLocation(packShaderProgramID, "model");
+            if (modelLoc != -1) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(packModelMatrix));
+            // else std::cerr << "Warning: Uniform 'model' not found in pack shader." << std::endl;
 
-        // Set MODEL Matrix for the PACK shader
-        GLint modelLoc = glGetUniformLocation(packShaderProgramID, "model");
-        if (modelLoc != -1) {
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(packModelMatrix));
+            GLint texLoc = glGetUniformLocation(packShaderProgramID, "diffuseTexture");
+            if (texLoc != -1 && packTextureID != 0) {
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, packTextureID);
+                glUniform1i(texLoc, 0);
+            }
+            // else { /* Warnings */ }
+
+            packModel->draw();
+            glBindTexture(GL_TEXTURE_2D, 0);
         }
-        else {
-            std::cerr << "Warning: Uniform 'model' not found in pack shader program " << packShaderProgramID << std::endl;
-        }
-
-        // *** Setup Texture for the PACK shader ***
-        GLint texLoc = glGetUniformLocation(packShaderProgramID, "diffuseTexture");
-        if (texLoc != -1 && packTextureID != 0) {
-            glActiveTexture(GL_TEXTURE0); // Activate texture unit 0
-            glBindTexture(GL_TEXTURE_2D, packTextureID); // Bind the loaded pack texture
-            glUniform1i(texLoc, 0); // Tell sampler uniform to use texture unit 0
-        }
-        else {
-            if (texLoc == -1) std::cerr << "Warning: Uniform 'diffuseTexture' not found for pack shader." << std::endl;
-            if (packTextureID == 0) std::cerr << "Warning: packTextureID is 0 when trying to render pack." << std::endl;
-        }
-
-        // Render the pack model
-        packModel->draw();
-
-        // Unbind texture (good practice after drawing with it)
-        // Although Application::render will call glUseProgram(0) later,
-        // unbinding texture here is cleaner.
-        glBindTexture(GL_TEXTURE_2D, 0);
     }
-
-    // --- Render Cards (using card/holo shaders) ---
-    if (state == OPENED || state == OPENING) {
-        // Optional: Hide or don't draw the pack model anymore once opening starts/finishes
-
-        // Render all cards
+    else if (state == REVEALING) {
+        // --- Render Cards ---
+        //std::cout << "[DEBUG] CardPack::render() - textureManager ptr: " << textureManager
+        //    << ", CardShaderID Check: " << textureManager->getCardShaderID() // Use getter
+        //    << ", HoloShaderID Check: " << textureManager->getHoloShaderID() // Use getter
+        //    << std::endl;
+        float currentTime = static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f;
         for (const auto& card : cards) {
-            // Apply appropriate CARD/HOLO shader
-            if (card.getRarity() == "holo" /* ... other conditions ... */) {
-                textureManager->applyHoloShader(card, static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f);
+            // Apply appropriate shader (Holo or Card)
+            // Ensure TextureManager has valid shaders!
+            bool useHolo = (card.getRarity() == "holo" || card.getRarity() == "reverse" || card.getRarity() == "ex" || card.getRarity() == "full art");
+            bool shaderApplied = false; // Flag to track if a shader was attempted
+            if (useHolo) {
+                // --- Use the getter in the check ---
+                if (textureManager->getHoloShaderID() != 0) {
+                    textureManager->applyHoloShader(card, currentTime);
+                    shaderApplied = true; // Mark shader as applied
+                }
+                else {
+                    std::cerr << "Error: Holo shader ID is 0 in CardPack::render. Skipping apply." << std::endl;
+                    // continue; // REMOVE continue for now
+                }
             }
             else {
-                textureManager->applyCardShader(card);
+                // --- Use the getter in the check ---
+                if (textureManager->getCardShaderID() != 0) {
+                    textureManager->applyCardShader(card);
+                    shaderApplied = true; // Mark shader as applied
+                }
+                else {
+                    std::cerr << "Error: Card shader ID is 0 in CardPack::render. Skipping apply." << std::endl;
+                    // continue; // REMOVE continue for now
+                }
             }
 
-            // Render the individual card, passing view and projection matrices separately
-            card.render(viewMatrix, projectionMatrix); // *** MODIFIED CALL ***
+            // Render the card (Card::render uses its own position/rotation)
+            //card.render(viewMatrix, projectionMatrix);
+            if (shaderApplied) {
+                card.render(viewMatrix, projectionMatrix);
+            }
+            else {
+                std::cerr << "Skipping render for " << card.getPokemonName() << " due to invalid shader." << std::endl;
+            }
         }
     }
+    // Add rendering for FINISHED state if desired
 }
 
 void CardPack::update(float deltaTime) {
-    // Update opening animation if in progress
-    if (state == OPENING) {
-        // Simple linear progression for now
-        openingProgress += deltaTime * 0.5f; // Adjust speed as needed
-
-        if (openingProgress >= 1.0f) {
-            openingProgress = 1.0f;
-            state = OPENED;
-        }
-    }
-
-    // Update cards if pack is opened
-    if (state == OPENED) {
+    // Update cards (handles their individual animations)
+    bool anyCardMoving = false;
+    if (state == REVEALING) {
         for (auto& card : cards) {
             card.update(deltaTime);
+            if (card.isCardAnimating()) {
+                anyCardMoving = true;
+            }
         }
     }
+
+    // Update global pack animation flag if needed
+    if (isAnimating && !anyCardMoving) {
+        isAnimating = false; // Last card finished moving
+        // std::cout << "Pack animation finished." << std::endl;
+    }
+
+    // Update pack model rotation/position only if closed?
+    // if (state == asdCLOSED) {
+    //     // rotation.y += deltaTime * 0.1f; // Example idle rotation
+    // }
 }
 
+// --- startOpeningAnimation ---
 void CardPack::startOpeningAnimation() {
-    if (state == CLOSED) {
-        state = OPENING;
-        openingProgress = 0.0f;
+    if (state ==  CLOSED && !cards.empty()) {
+        state =  REVEALING;
+        currentCardIndex = 0;
+        isAnimating = true; // Pack starts animating
+
+        // Set the first card's target to the front position
+        cards[currentCardIndex].setTargetTransform(frontPosition, glm::vec3(0.0f), cards[currentCardIndex].getScale());
+
+        // Optional: Set targets for other cards to slightly fan out or just stay put initially
+        for (size_t i = 1; i < cards.size(); ++i) {
+            float zPos = stackCenter.z - i * stackSpacing;
+            glm::vec3 stackPos = glm::vec3(stackCenter.x, stackCenter.y, zPos);
+            cards[i].setTargetTransform(stackPos, cards[i].getRotation(), cards[i].getScale());
+        }
+
+        std::cout << "Pack opening, state = REVEALING. Card " << currentCardIndex << " moving to front." << std::endl;
     }
 }
 
-bool CardPack::isOpeningComplete() const {
-    return state == OPENED;
+// --- cycleCard ---
+void CardPack::cycleCard() {
+    if (state !=  REVEALING || cards.empty()) {
+        return; // Can only cycle in this state
+    }
+
+    // Optional: Prevent cycling if previous animation isn't finished
+    if (isAnimating) {
+        // Check if all cards have stopped animating
+        bool stillMoving = false;
+        for (const auto& card : cards) {
+            if (card.isCardAnimating()) {
+                stillMoving = true;
+                break;
+            }
+        }
+        if (stillMoving) return; // Wait for previous animation
+        else isAnimating = false; // Reset pack animating flag
+    }
+
+
+    // --- Start new cycle animation ---
+    isAnimating = true;
+
+    // 1. Identify current front card
+    int frontCardIdx = currentCardIndex;
+
+    // 2. Identify the next card to bring to front
+    int nextCardIdx = (currentCardIndex + 1) % cards.size();
+
+    // 3. Calculate target position for the card moving to the back
+    // Place it behind the last card's initial stack position
+    float backZ = stackCenter.z - (cards.size()) * stackSpacing + backPositionOffset.z;
+    glm::vec3 targetBackPos = glm::vec3(stackCenter.x + backPositionOffset.x, stackCenter.y + backPositionOffset.y, backZ);
+    glm::vec3 targetBackRot = glm::vec3(0.0f, glm::radians(180.0f), 0.0f); // Rotate to face away
+
+    // 4. Set targets
+    cards[frontCardIdx].setTargetTransform(targetBackPos, targetBackRot, cards[frontCardIdx].getScale());
+    cards[nextCardIdx].setTargetTransform(frontPosition, glm::vec3(0.0f), cards[nextCardIdx].getScale()); // Bring next card to front, facing camera
+
+    // 5. Update index
+    currentCardIndex = nextCardIdx;
+
+    std::cout << "Cycling card. Card " << frontCardIdx << " moving to back. Card " << currentCardIndex << " moving to front." << std::endl;
+
+    // Optional: Check if we've cycled all cards
+    // if (currentCardIndex == 0 && frontCardIdx == cards.size() - 1) { // Just completed a full loop
+    //     // state =  FINISHED;
+    //     // std::cout << "All cards cycled." << std::endl;
+    // }
 }
 
+bool CardPack::isCycleComplete() const {
+    // Implement logic if needed, e.g., return true if state ==  FINISHED
+    return state ==  FINISHED;
+}
+
+// --- Keep rotate/setPosition for pack ---
 void CardPack::rotate(float x, float y, float z) {
-    rotation.x += x;
-    rotation.y += y;
-    rotation.z += z;
+    if (state ==  CLOSED) { // Only rotate pack model
+        rotation.x += x;
+        rotation.y += y;
+        rotation.z += z;
+    }
 }
 
 void CardPack::setPosition(float x, float y, float z) {
-    position = glm::vec3(x, y, z);
+    if (state ==  CLOSED) { // Only position pack model
+        position = glm::vec3(x, y, z);
+    }
 }
 
 bool CardPack::isPointInside(float x, float y) const {

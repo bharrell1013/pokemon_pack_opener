@@ -25,6 +25,11 @@ private:
     glm::vec3 scale;
     glm::vec3 velocity;       // For physics-based animation
 
+    glm::vec3 targetPosition;
+    glm::vec3 targetRotation;
+    glm::vec3 targetScale;
+    bool isAnimating;
+
     // Material properties for different effects
     float shininess;
     float holoIntensity;
@@ -34,8 +39,8 @@ private:
     bool isRevealed;
     
     // Card dimensions
-    const float CARD_WIDTH = 2.5f;
-    const float CARD_HEIGHT = 3.5f;
+    const float CARD_WIDTH = 2.5f * 0.8f;
+    const float CARD_HEIGHT = 3.5f * 0.8f;
     const float CARD_DEPTH = 0.01f;
 
 public:
@@ -53,6 +58,9 @@ public:
     void loadTexture();
     void render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix) const;
     void update(float deltaTime);
+
+    void setTargetTransform(const glm::vec3& pos, const glm::vec3& rot, const glm::vec3& scl);
+    bool isCardAnimating() const { return isAnimating; }
     
     // Animation controls
     void startRevealAnimation();
@@ -68,6 +76,8 @@ public:
     void setRotation(const glm::vec3& rot);
     void setScale(const glm::vec3& scale);
     void setVelocity(const glm::vec3& vel);
+    glm::vec3 getScale() const { return scale; } // Add getter for scale
+	glm::vec3 getRotation() const { return rotation; } // Add getter for rotation
 
 private:
     void initializeMesh();

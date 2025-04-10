@@ -37,6 +37,8 @@ public:
     void applyCardShader(const Card& card);
     void applyHoloShader(const Card& card, float time);
     GLuint getCurrentShader() const { return currentShader; }
+    GLuint getCardShaderID() const { return cardShader; }     // Add this
+    GLuint getHoloShaderID() const { return holoShader; }     // Add this
 
     // Initialize shaders
     void initializeShaders();

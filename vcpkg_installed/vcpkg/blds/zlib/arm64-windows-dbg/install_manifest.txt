@@ -1,0 +1,2 @@
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/pkgs/zlib_arm64-windows/debug/lib/zlibd.lib
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/pkgs/zlib_arm64-windows/debug/bin/zlibd1.dll

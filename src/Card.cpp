@@ -292,4 +292,5 @@ glm::vec3 Card::getPosition() const { return position; }
 void Card::setRotation(const glm::vec3& rot) { rotation = rot; }
 //glm::vec3 Card::getRotation() const { return rotation; } // Add getter for rotation
 void Card::setScale(const glm::vec3& s) { scale = s; }
+void Card::setTextureID(GLuint id) { textureID = id; }
 // void Card::setVelocity(const glm::vec3& vel) { velocity = vel; } // Removed

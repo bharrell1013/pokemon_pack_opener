@@ -1,0 +1,2 @@
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/detect_compiler/arm64-windows-rel/CMakeFiles/edit_cache.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/detect_compiler/arm64-windows-rel/CMakeFiles/rebuild_cache.dir

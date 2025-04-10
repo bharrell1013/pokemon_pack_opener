@@ -1,0 +1,16 @@
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/CMakeFiles/edit_cache.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/CMakeFiles/rebuild_cache.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/CMakeFiles/list_install_components.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/CMakeFiles/install.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/CMakeFiles/install/local.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/cpr/CMakeFiles/cpr.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/cpr/CMakeFiles/edit_cache.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/cpr/CMakeFiles/rebuild_cache.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/cpr/CMakeFiles/list_install_components.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/cpr/CMakeFiles/install.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/cpr/CMakeFiles/install/local.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/include/CMakeFiles/edit_cache.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/include/CMakeFiles/rebuild_cache.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/include/CMakeFiles/list_install_components.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/include/CMakeFiles/install.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg/include/CMakeFiles/install/local.dir

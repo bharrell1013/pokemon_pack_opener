@@ -1,0 +1,7 @@
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/zlib/arm64-windows-rel/CMakeFiles/zlib.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/zlib/arm64-windows-rel/CMakeFiles/test.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/zlib/arm64-windows-rel/CMakeFiles/edit_cache.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/zlib/arm64-windows-rel/CMakeFiles/rebuild_cache.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/zlib/arm64-windows-rel/CMakeFiles/list_install_components.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/zlib/arm64-windows-rel/CMakeFiles/install.dir
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/zlib/arm64-windows-rel/CMakeFiles/install/local.dir

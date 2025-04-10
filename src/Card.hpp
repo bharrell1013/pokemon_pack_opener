@@ -78,6 +78,7 @@ public:
     void setVelocity(const glm::vec3& vel);
     glm::vec3 getScale() const { return scale; } // Add getter for scale
 	glm::vec3 getRotation() const { return rotation; } // Add getter for rotation
+    void setTextureID(GLuint id);
 
 private:
     void initializeMesh();

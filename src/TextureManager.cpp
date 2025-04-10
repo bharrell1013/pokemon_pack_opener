@@ -4,7 +4,11 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <random>
 #include <vector> // Needed for shader info log
+#include <cpr/cpr.h>         // For HTTP requests
+#include <nlohmann/json.hpp> // For JSON parsing
+using json = nlohmann::json; // Alias for convenience
 
 // Define the necessary headers for image loading
 #define STB_IMAGE_IMPLEMENTATION
@@ -37,95 +41,91 @@ TextureManager::~TextureManager() {
     }
 }
 
-GLuint TextureManager::loadTexture(const std::string& filePath) {
-    // Check if already loaded
-    if (textureMap.find(filePath) != textureMap.end()) {
-        return textureMap[filePath];
+GLuint TextureManager::loadTexture(const std::string& pathOrUrl) {
+    // 1. Check Cache
+    if (textureMap.count(pathOrUrl)) {
+        return textureMap[pathOrUrl];
     }
-    // Debugging output for paths (keep as is)
-    std::filesystem::path fullPath = std::filesystem::absolute(filePath);
-    std::cout << "Attempting to load texture from absolute path: " << fullPath.string() << std::endl;
-    std::cout << "Relative path used: " << filePath << std::endl;
+
+    // 2. Check if it's a URL
+    if (pathOrUrl.rfind("http://", 0) == 0 || pathOrUrl.rfind("https://", 0) == 0) {
+        // It's a URL, download and load from memory
+        std::vector<unsigned char> imageData = downloadImageData(pathOrUrl);
+        if (!imageData.empty()) {
+            return loadTextureFromMemory(imageData, pathOrUrl);
+        }
+        return 0;
+    }
+
+    // 3. It's a local file path
+    std::cout << "Attempting to load texture from local path: " << pathOrUrl << std::endl;
+    std::filesystem::path fullPath = std::filesystem::absolute(pathOrUrl);
+    std::cout << "Absolute path: " << fullPath.string() << std::endl;
     std::cout << "Current working directory: " << std::filesystem::current_path() << std::endl;
 
-    // Load image
     int width, height, channels;
-    // Ensure vertical flip matches OpenGL's texture coordinate system if needed
-    stbi_set_flip_vertically_on_load(true); // Uncomment if textures are upside down
-    unsigned char* data = stbi_load(filePath.c_str(), &width, &height, &channels, 0);
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data = stbi_load(pathOrUrl.c_str(), &width, &height, &channels, 0);
+
     if (!data) {
-        std::cerr << "Failed to load texture: " << filePath << std::endl;
+        std::cerr << "Failed to load texture from local path: " << pathOrUrl << std::endl;
         std::cerr << "STB Failure Reason: " << stbi_failure_reason() << std::endl;
-        return 0; // Return 0 on failure
-    }
-    else {
-        std::cout << "Successfully loaded texture: " << filePath << " (" << width << "x" << height << ", " << channels << " channels)" << std::endl;
+        return 0;
     }
 
+    std::cout << "Successfully loaded texture: " << pathOrUrl
+              << " (" << width << "x" << height << ", " << channels << " channels)" << std::endl;
 
-    // Create OpenGL texture
-    GLuint textureID = 0; // Initialize to 0
+    GLuint textureID = 0;
     glGenTextures(1, &textureID);
     if (textureID == 0) {
-        std::cerr << "OpenGL Error: Failed to generate texture ID for " << filePath << std::endl;
+        std::cerr << "OpenGL Error: Failed to generate texture ID for " << pathOrUrl << std::endl;
         stbi_image_free(data);
         return 0;
     }
-    glBindTexture(GL_TEXTURE_2D, textureID);
 
-    // Set texture parameters
+    glBindTexture(GL_TEXTURE_2D, textureID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    // Upload texture data
     GLenum internalFormat = GL_RGB;
     GLenum dataFormat = GL_RGB;
     if (channels == 4) {
         internalFormat = GL_RGBA;
         dataFormat = GL_RGBA;
-    }
-    else if (channels == 3) {
+    } else if (channels == 3) {
         internalFormat = GL_RGB;
         dataFormat = GL_RGB;
-    }
-    else if (channels == 1) {
-        internalFormat = GL_RED; // Or GL_R8 if needed
+    } else if (channels == 1) {
+        internalFormat = GL_RED;
         dataFormat = GL_RED;
-        std::cout << "Warning: Loading texture " << filePath << " as single channel (GL_RED)." << std::endl;
-    }
-    else {
-        std::cerr << "Error: Unsupported number of channels (" << channels << ") for texture: " << filePath << std::endl;
+        std::cout << "Warning: Loading texture " << pathOrUrl << " as single channel (GL_RED)." << std::endl;
+    } else {
+        std::cerr << "Error: Unsupported number of channels (" << channels << ") for texture: " << pathOrUrl << std::endl;
         stbi_image_free(data);
-        glDeleteTextures(1, &textureID); // Clean up generated texture ID
+        glDeleteTextures(1, &textureID);
         return 0;
     }
 
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D); // Generate mipmaps AFTER setting data
+    glGenerateMipmap(GL_TEXTURE_2D);
 
-    // Check for OpenGL errors during texture loading
     GLenum err;
     while ((err = glGetError()) != GL_NO_ERROR) {
-        std::cerr << "OpenGL Texture Error (" << filePath << "): " << err << std::endl;
-        // Decide if error is critical. If so, clean up and return 0.
+        std::cerr << "OpenGL Texture Error (" << pathOrUrl << "): " << err << std::endl;
         stbi_image_free(data);
         glDeleteTextures(1, &textureID);
-        glBindTexture(GL_TEXTURE_2D, 0); // Unbind
+        glBindTexture(GL_TEXTURE_2D, 0);
         return 0;
     }
 
-
-    // Free image data
     stbi_image_free(data);
-
-    // Unbind texture (good practice)
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    // Store and return
-    textureMap[filePath] = textureID;
-    std::cout << "Texture stored in map: " << filePath << " -> ID: " << textureID << std::endl;
+    textureMap[pathOrUrl] = textureID;
+    std::cout << "Texture stored in map: " << pathOrUrl << " -> ID: " << textureID << std::endl;
     return textureID;
 }
 
@@ -139,23 +139,193 @@ GLuint TextureManager::getTexture(const std::string& textureName) {
 }
 
 
-// --- generateCardTexture, generateHoloEffect remain the same ---
-GLuint TextureManager::generateCardTexture(const Card& card) {
-    // Create texture path based on Pokemon type
-    //std::string templatePath = "textures/cards/template_" + card.getPokemonType() + ".png";
-    std::string templatePath = "textures/cards/card_template.png";
-    std::string pokemonPath = "textures/pokemon/" + card.getPokemonName() + ".png";
+// --- Pokemon TCG API Integration ---
+std::string TextureManager::mapRarityToApiQuery(const std::string& rarity) {
+    if (rarity == "normal") return "rarity:Common OR rarity:Uncommon";
+    if (rarity == "reverse") return "rarity:Common OR rarity:Uncommon";
+    if (rarity == "holo") return "rarity:\"Rare Holo\"";
+    if (rarity == "ex") return "subtypes:EX rarity:\"Rare Holo EX\"";
+    if (rarity == "full art") return "rarity:\"Rare Ultra\" OR rarity:\"Rare Secret\"";
 
-    // Try to load Pokemon-specific texture first
-    GLuint textureID = loadTexture(pokemonPath);
+    std::cerr << "Warning: Unknown rarity '" << rarity << "' for API query. Defaulting to Common." << std::endl;
+    return "rarity:Common";
+}
 
-    // If Pokemon-specific texture failed, use type template
-    if (textureID == 0) {
-        std::cout << "Pokemon-specific texture failed or not found for " << card.getPokemonName() << ", falling back to template: " << templatePath << std::endl;
-        textureID = loadTexture(templatePath);
-        if (textureID == 0) {
-            std::cerr << "Error: Failed to load template texture as well: " << templatePath << std::endl;
+std::string TextureManager::fetchCardImageUrl(const Card& card) {
+    std::string rarityQuery = mapRarityToApiQuery(card.getRarity());
+    std::string cardType = card.getPokemonType();
+
+    std::string typeQuery = "";
+    if (!cardType.empty()) {
+        typeQuery = " types:" + cardType;
+    }
+
+    std::string searchQuery = rarityQuery + typeQuery;
+
+    int resultsToFetch = 20; // Ask for up to 20 cards matching the query
+    cpr::Url url = cpr::Url{"https://api.pokemontcg.io/v2/cards"};
+    cpr::Parameters params = cpr::Parameters{{"q", searchQuery}, {"pageSize", std::to_string(resultsToFetch)}};
+
+    std::cout << "[API] Searching for: " << searchQuery << std::endl;
+
+    cpr::Response response = cpr::Get(url, params,
+                                    cpr::Header{{"X-Api-Key", apiKey}});
+
+    if (response.status_code != 200) {
+        std::cerr << "[API] Error fetching card data. Status code: " << response.status_code
+                  << ", URL: " << response.url << ", Error: " << response.error.message << std::endl;
+        if (!response.text.empty()) {
+            std::cerr << "[API] Response body: " << response.text.substr(0, 500) << "..." << std::endl;
         }
+        return "";
+    }
+
+    // --- Parse JSON and Pick Random ---
+    try {
+        json data = json::parse(response.text);
+
+        if (data.contains("data") && data["data"].is_array() && !data["data"].empty()) {
+            json cardResults = data["data"];
+            int numResults = cardResults.size(); // How many did the API actually return?
+
+            if (numResults > 0) {
+                // --- Pick a random index from the returned results ---
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                std::uniform_int_distribution<int> distrib(0, numResults - 1); // Range is 0 to numResults-1
+                int randomIndex = distrib(gen);
+                // --- End random index selection ---
+
+                json randomCard = cardResults[randomIndex]; // Get the JSON object for the random card
+
+                if (randomCard.contains("images") && randomCard["images"].contains("large")) {
+                    std::string imageUrl = randomCard["images"]["large"].get<std::string>();
+                    std::cout << "[API] Found " << numResults << " results. Picked random index " << randomIndex
+                        << ". URL: " << imageUrl << std::endl;
+                    return imageUrl; // Return the URL of the randomly selected card
+                }
+                else {
+                    std::cerr << "[API] Error: 'images.large' field not found in randomly selected card data (index " << randomIndex << ")." << std::endl;
+                    // Optionally: try another random index? Or just fail.
+                    return "";
+                }
+            }
+            else {
+                // This case shouldn't happen if the outer check passed, but good to have
+                std::cout << "[API] No cards found matching query (empty data array): " << searchQuery << std::endl;
+                return "";
+            }
+
+        }
+        else {
+            std::cout << "[API] 'data' array not found or empty in response for query: " << searchQuery << std::endl;
+            if (data.contains("error")) {
+                std::cerr << "[API] Error message from API: " << data["error"] << std::endl;
+            }
+            // Example: Sometimes the API might just return a single object on error
+            else if (data.contains("status") && data.contains("message")) {
+                std::cerr << "[API] Error message from API: Status " << data["status"] << " - " << data["message"] << std::endl;
+            }
+            return "";
+        }
+    }
+    catch (json::exception& e) { // Catch both parse_error and other json exceptions
+        std::cerr << "[API] JSON Exception: " << e.what() << std::endl;
+        std::cerr << "[API] Response Text: " << response.text.substr(0, 500) << "..." << std::endl;
+        return "";
+    }
+    return "";
+}
+
+std::vector<unsigned char> TextureManager::downloadImageData(const std::string& imageUrl) {
+    std::cout << "Downloading image from: " << imageUrl << std::endl;
+    cpr::Response response = cpr::Get(cpr::Url{imageUrl});
+
+    if (response.status_code == 200) {
+        return std::vector<unsigned char>(response.text.begin(), response.text.end());
+    }
+    std::cerr << "Failed to download image. Status code: " << response.status_code
+              << ", URL: " << imageUrl << ", Error: " << response.error.message << std::endl;
+    return {};
+}
+
+GLuint TextureManager::loadTextureFromMemory(const std::vector<unsigned char>& imageData, const std::string& cacheKey) {
+    if (textureMap.count(cacheKey)) {
+        return textureMap[cacheKey];
+    }
+
+    if (imageData.empty()) {
+        std::cerr << "Error: Image data buffer is empty for key: " << cacheKey << std::endl;
+        return 0;
+    }
+
+    int width, height, channels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data = stbi_load_from_memory(imageData.data(), static_cast<int>(imageData.size()),
+                                              &width, &height, &channels, 0);
+
+    if (!data) {
+        std::cerr << "Failed to load texture from memory for key: " << cacheKey << std::endl;
+        std::cerr << "STB Failure Reason: " << stbi_failure_reason() << std::endl;
+        return 0;
+    }
+
+    GLuint textureID = 0;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    GLenum internalFormat = (channels == 4) ? GL_RGBA : GL_RGB;
+    GLenum dataFormat = (channels == 4) ? GL_RGBA : GL_RGB;
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(data);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    textureMap[cacheKey] = textureID;
+    return textureID;
+}
+
+// --- Modified: generateCardTexture ---
+GLuint TextureManager::generateCardTexture(const Card& card) {
+    GLuint textureID = 0;
+
+    // --- 1. Attempt API Fetch ---
+    std::string imageUrl = fetchCardImageUrl(card);
+
+    if (!imageUrl.empty()) {
+        std::vector<unsigned char> imageData = downloadImageData(imageUrl);
+        if (!imageData.empty()) {
+            textureID = loadTextureFromMemory(imageData, imageUrl);
+        }
+    }
+
+    // --- 2. Fallback to Local Template if API failed ---
+    if (textureID == 0) {
+        std::string templatePath = "textures/cards/card_template.png";
+        std::cout << "[Fallback] API fetch failed or yielded no image for " << card.getPokemonName()
+                  << ". Falling back to template: " << templatePath << std::endl;
+        textureID = loadTexture(templatePath);
+    }
+
+    // --- 3. Fallback to Placeholder if Template ALSO failed ---
+    if (textureID == 0) {
+        std::string placeholderPath = "textures/pokemon/placeholder.png";
+        std::cerr << "[Fallback] Failed to load template texture. Falling back to placeholder: "
+                  << placeholderPath << std::endl;
+        textureID = loadTexture(placeholderPath);
+    }
+
+    // --- 4. Final Error Check ---
+    if (textureID == 0) {
+        std::cerr << "FATAL: generateCardTexture failed to load ANY texture (API, template, placeholder) for "
+                  << card.getPokemonName() << std::endl;
     }
 
     return textureID;
@@ -456,18 +626,19 @@ std::string TextureManager::loadShaderSource(const std::string& path) {
 // --- getTypeValue and getRarityValue remain the same ---
 int TextureManager::getTypeValue(const std::string& type) {
     // Convert type string to numeric value for shader
-    if (type == "normal") return 0;
-    if (type == "fire") return 1;
-    if (type == "water") return 2;
-    if (type == "grass") return 3;
-    if (type == "electric") return 4;
-    if (type == "psychic") return 5;
-    if (type == "fighting") return 6;
-    if (type == "dark") return 7;
-    if (type == "dragon") return 8;
-    if (type == "fairy") return 9;
-    if (type == "steel") return 10;
-    if (type == "ghost") return 11;
+    if (type == "Normal") return 0;    // Capitalized
+    if (type == "Fire") return 1;      // Capitalized
+    if (type == "Water") return 2;     // Capitalized
+    if (type == "Grass") return 3;     // Capitalized
+    if (type == "Lightning") return 4; // Capitalized (API uses Lightning for Electric)
+    if (type == "Psychic") return 5;    // Capitalized
+    if (type == "Fighting") return 6;   // Capitalized
+    if (type == "Darkness") return 7;   // Capitalized (API uses Darkness for Dark)
+    if (type == "Dragon") return 8;     // Capitalized
+    if (type == "Fairy") return 9;      // Capitalized
+    if (type == "Metal") return 10;     // Capitalized (API uses Metal for Steel)
+    if (type == "Ghost") return 11;     // Capitalized - Assuming Ghost was intended type 11? Check your shader array order.
+    if (type == "Colorless") return 0;  // Map Colorless back to Normal/Index 0 for tinting? Or add a 12th color?
     std::cerr << "Warning: Unknown Pokemon type '" << type << "' encountered in getTypeValue. Defaulting to 0 (normal)." << std::endl;
     return 0; // Default to normal type
 }

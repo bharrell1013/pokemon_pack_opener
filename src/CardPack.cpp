@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <GL/freeglut_std.h>
 
+
 CardPack::CardPack(TextureManager* texManager) :
     state(CLOSED), // Start closed
     textureManager(texManager),
@@ -73,11 +74,19 @@ void CardPack::generateCards(CardDatabase& database) {
 
     glm::vec3 initialScale(0.8f, 0.8f, 0.8f); // Use consistent scale
 
+    std::vector<std::string> typesToUse = {
+       "Grass", "Fire", "Water", "Lightning", "Psychic",
+       "Fighting", "Darkness", "Metal", "Fairy", "Dragon", "Colorless"
+       // Using API names directly now
+    };
+
     for (int i = 0; i < numCards; ++i) {
         // Determine rarity (example logic)
         std::string rarity = (i < 7) ? "normal" : (i < 9) ? "reverse" : "holo";
+        std::string cardType = typesToUse[i % typesToUse.size()];
+        std::string cardName = cardType + " Pokemon " + std::to_string(i + 1);
         // Get actual card data from database eventually
-        cards.emplace_back("Pokemon " + std::to_string(i + 1), "normal", rarity, textureManager);
+        cards.emplace_back(cardName, cardType, rarity, textureManager);
 
         Card& newCard = cards.back();
 

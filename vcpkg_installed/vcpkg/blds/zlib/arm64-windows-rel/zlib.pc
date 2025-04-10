@@ -1,0 +1,13 @@
+prefix=C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/pkgs/zlib_arm64-windows
+exec_prefix=C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/pkgs/zlib_arm64-windows
+libdir=C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/pkgs/zlib_arm64-windows/lib
+sharedlibdir=C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/pkgs/zlib_arm64-windows/lib
+includedir=C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/pkgs/zlib_arm64-windows/include
+
+Name: zlib
+Description: zlib compression library
+Version: 1.3.1
+
+Requires:
+Libs: -L${libdir} -L${sharedlibdir} -lzlib
+Cflags: -I${includedir}

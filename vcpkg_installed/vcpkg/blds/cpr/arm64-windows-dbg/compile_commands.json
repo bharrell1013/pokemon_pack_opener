@@ -1,0 +1,170 @@
+[
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\accept_encoding.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\accept_encoding.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\accept_encoding.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\accept_encoding.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\async.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\async.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\async.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\async.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\auth.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\auth.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\auth.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\auth.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\bearer.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\bearer.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\bearer.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\bearer.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\callback.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\callback.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\callback.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\callback.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\cert_info.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\cert_info.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\cert_info.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\cert_info.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\cookies.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\cookies.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\cookies.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\cookies.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\cprtypes.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\cprtypes.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\cprtypes.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\cprtypes.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\curl_container.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\curl_container.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\curl_container.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\curl_container.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\curlholder.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\curlholder.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\curlholder.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\curlholder.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\error.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\error.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\error.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\error.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\file.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\file.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\file.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\file.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\multipart.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\multipart.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\multipart.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\multipart.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\parameters.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\parameters.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\parameters.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\parameters.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\payload.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\payload.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\payload.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\payload.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\proxies.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\proxies.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\proxies.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\proxies.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\proxyauth.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\proxyauth.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\proxyauth.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\proxyauth.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\session.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\session.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\session.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\session.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\threadpool.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\threadpool.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\threadpool.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\threadpool.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\timeout.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\timeout.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\timeout.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\timeout.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\unix_socket.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\unix_socket.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\unix_socket.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\unix_socket.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\util.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\util.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\util.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\util.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\response.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\response.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\response.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\response.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\redirect.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\redirect.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\redirect.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\redirect.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\interceptor.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\interceptor.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\interceptor.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\interceptor.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\ssl_ctx.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\ssl_ctx.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\ssl_ctx.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\ssl_ctx.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\curlmultiholder.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\curlmultiholder.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\curlmultiholder.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\curlmultiholder.cpp.obj"
+},
+{
+  "directory": "C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/blds/cpr/arm64-windows-dbg",
+  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1442~1.344\\bin\\HOSTAR~1\\arm64\\cl.exe   /TP -DCPR_ENABLE_CURL_HTTP_ONLY -DCPR_ENABLE_SSL -DCPR_USE_SYSTEM_CURL -Dcpr_EXPORTS -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\include\" -I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\arm64-windows-dbg\\cpr_generated_includes\" -external:I\"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\arm64-windows\\include\" -external:W0  /nologo /DWIN32 /D_WINDOWS /utf-8 /GR /EHsc /MP  /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1  -std:c++17 -MDd /Focpr\\CMakeFiles\\cpr.dir\\multiperform.cpp.obj /Fdcpr\\CMakeFiles\\cpr.dir\\ /FS -c \"C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\multiperform.cpp\"",
+  "file": "C:\\Projects\\CS 334\\final_project\\base\\vcpkg_installed\\vcpkg\\blds\\cpr\\src\\1.11.2-25aeeafaf4.clean\\cpr\\multiperform.cpp",
+  "output": "cpr\\CMakeFiles\\cpr.dir\\multiperform.cpp.obj"
+}
+]

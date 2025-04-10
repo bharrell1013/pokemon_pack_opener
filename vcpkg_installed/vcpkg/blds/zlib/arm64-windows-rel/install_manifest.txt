@@ -1,0 +1,4 @@
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/pkgs/zlib_arm64-windows/lib/zlib.lib
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/pkgs/zlib_arm64-windows/bin/zlib1.dll
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/pkgs/zlib_arm64-windows/include/zconf.h
+C:/Projects/CS 334/final_project/base/vcpkg_installed/vcpkg/pkgs/zlib_arm64-windows/include/zlib.h

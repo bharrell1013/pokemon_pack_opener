@@ -4,6 +4,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <iostream>
 #include <glm/gtc/type_ptr.hpp>
+#include <GL/freeglut.h>
 
 Application::Application() :
     lastFrameTime(0),
@@ -56,7 +57,8 @@ void Application::initialize(int argc, char** argv) {
     glutInitWindowSize(800, 600);
 
     std::cout << "Calling glutCreateWindow..." << std::endl;
-    glutCreateWindow("Pok�mon Pack Simulator");
+    const char* originalTitle = "Pokémon Pack Simulator"; // Store original title
+    glutCreateWindow(originalTitle);
     std::cout << "glutCreateWindow DONE (OpenGL context should exist now)" << std::endl;
     
     try {
@@ -134,8 +136,10 @@ void Application::initialize(int argc, char** argv) {
     // Generate a card pack (Now cardPack and cardDatabase exist)
     if (cardPack && cardDatabase) { // Good practice to check pointers
         std::cout << "Generating cards..." << std::endl;
+        glutSetWindowTitle("Loading Card Images...");
         cardPack->generateCards(*cardDatabase);
         std::cout << "Cards generated." << std::endl;
+        glutSetWindowTitle(originalTitle);
     }
     else {
         std::cerr << "Error: cardPack or cardDatabase is null before generating cards!" << std::endl;
@@ -164,90 +168,10 @@ void Application::update() {
     }
 }
 
-//void Application::render() {
-//    // Clear the screen
-//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//
-//    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-//
-//    // Create view-projection matrix
-//    glm::mat4 projection = glm::perspective(
-//        glm::radians(45.0f),
-//        (float)glutGet(GLUT_WINDOW_WIDTH) / (float)glutGet(GLUT_WINDOW_HEIGHT),
-//        0.1f,
-//        100.0f
-//    );
-//
-//    glm::mat4 view = glm::lookAt(
-//        cameraPos,
-//        glm::vec3(0.0f, 0.0f, 0.0f),  // Look at position
-//        glm::vec3(0.0f, 1.0f, 0.0f)   // Up vector
-//    );
-//
-//    glm::mat4 viewProjection = projection * view;
-//
-//    // *** ACTIVATE THE SHADER ***
-//    glUseProgram(shaderProgramID);
-//
-//    // *** SET VIEW AND PROJECTION UNIFORMS (once per frame usually) ***
-//    GLint viewLoc = glGetUniformLocation(shaderProgramID, "view");
-//    GLint projLoc = glGetUniformLocation(shaderProgramID, "projection");
-//    GLint viewPosLoc = glGetUniformLocation(shaderProgramID, "viewPos"); // For lighting
-//
-//    if (viewLoc != -1) {
-//        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-//    }
-//    else {
-//        std::cerr << "Warning: Uniform 'view' not found in shader." << std::endl;
-//    }
-//    if (projLoc != -1) {
-//        glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-//    }
-//    else {
-//        std::cerr << "Warning: Uniform 'projection' not found in shader." << std::endl;
-//    }
-//    if (viewPosLoc != -1) {
-//        glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
-//    }
-//    else {
-//        std::cerr << "Warning: Uniform 'viewPos' not found in shader." << std::endl;
-//    }
-//
-//    // --- Texture Setup (Needs implementation) ---
-//    // You'll need to:
-//    // 1. Load a texture using textureManager->loadTexture("path/to/texture.png");
-//    // 2. Activate a texture unit: glActiveTexture(GL_TEXTURE0);
-//    // 3. Bind the texture: glBindTexture(GL_TEXTURE_2D, textureID);
-//    // 4. Tell the shader sampler uniform which unit to use:
-//    GLint texLoc = glGetUniformLocation(shaderProgramID, "diffuseTexture");
-//    if (texLoc != -1) {
-//        glActiveTexture(GL_TEXTURE0); // Activate texture unit 0
-//        glBindTexture(GL_TEXTURE_2D, packTextureID); // Bind the loaded texture
-//        glUniform1i(texLoc, 0); // Tell sampler uniform to use texture unit 0
-//    }
-//    else {
-//        std::cerr << "Warning: Uniform 'diffuseTexture' not found." << std::endl;
-//    }
-//    // --- End Texture Setup Placeholder ---
-//
-//    // Render components that use this shader
-//    if (cardPack) {
-//        // *** PASS DATA TO SHADER ***
-//        cardPack->render(shaderProgramID); // Pass shader ID
-//    }
-//
-//    // Render components
-//    //cardPack->render(viewProjection);
-//
-//	glUseProgram(0); // Deactivate the shader program after rendering
-//    glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture from unit 0
-//
-//    // Swap buffers
-//    glutSwapBuffers();
-//}
 void Application::render() {
     // Clear the screen
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // --- End Loading Screen Check ---
 
     glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 6.0f); // Keep camera position consistent
 

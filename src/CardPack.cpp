@@ -1,42 +1,45 @@
 #include "CardPack.hpp"
-#include "TextureManager.hpp"
+#include "TextureManager.hpp" // Include TextureManager
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <filesystem>
 #include <glm/gtc/type_ptr.hpp>
 #include <GL/freeglut_std.h>
-
+#include <random> // For rarity selection
+#include <vector> // For type list
 
 CardPack::CardPack(TextureManager* texManager) :
     state(CLOSED), // Start closed
-    textureManager(texManager),
+    textureManager(texManager), // Ensure this is initialized
     currentCardIndex(0),
-    stackCenter(0.0f, 0.0f, 0.0f),   // Stack cards around the origin
-    frontPosition(0.0f, 0.0f, 1.5f), // Position the front card closer to camera
+    stackCenter(0.0f, 0.0f, 0.0f),
+    frontPosition(0.0f, 0.0f, 1.5f), // Adjust Z based on camera distance
     backPositionOffset(0.0f, 0.0f, -0.5f), // How far back the cycled card goes relative to stack end
-    stackSpacing(0.05f),           // Very small Z spacing for the stack
-    animationSpeed(8.0f),            // Speed of card movement (adjust as needed)
-    isAnimating(false),              // Global pack animation flag (optional)
-    position(glm::vec3(0.0f)),     // Initial pack model position
-    rotation(glm::vec3(0.0f))      // Initial pack model rotation
+    stackSpacing(0.015f), // Make cards closer in the stack initially
+    animationSpeed(8.0f),
+    isAnimating(false),
+    position(glm::vec3(0.0f)),
+    rotation(glm::vec3(0.0f))
 {
+    if (!textureManager) {
+         throw std::runtime_error("CardPack created with null TextureManager!");
+    }
     std::cout << "CardPack constructor: Attempting to load pack model..." << std::endl;
-    std::string packModelPath = "models/pack.obj"; // Primary model
-    std::string fallbackModelPath = "models/cube.obj"; // Fallback
+    std::string packModelPath = "models/pack.obj";
+    std::string fallbackModelPath = "models/cube.obj"; // Fallback if pack fails
 
     // Try loading the primary pack model first
-    if (std::filesystem::exists(packModelPath)) {
+     if (std::filesystem::exists(packModelPath)) {
         try {
             packModel = std::make_unique<Mesh>(packModelPath);
             std::cout << "Loaded primary pack model: " << packModelPath << std::endl;
-        }
-        catch (const std::exception& e) {
+        } catch (const std::exception& e) {
             std::cerr << "Failed to load primary pack model '" << packModelPath << "': " << e.what() << std::endl;
             packModel = nullptr; // Ensure it's null if primary failed
         }
-    }
-    else {
+    } else {
         std::cerr << "Primary pack model not found at: " << packModelPath << std::endl;
+         std::cerr << "Searched relative to working directory: " << std::filesystem::current_path() << std::endl;
     }
 
     // If primary model failed or wasn't found, try the fallback
@@ -46,146 +49,238 @@ CardPack::CardPack(TextureManager* texManager) :
             try {
                 packModel = std::make_unique<Mesh>(fallbackModelPath);
                 std::cout << "Loaded fallback model: " << fallbackModelPath << std::endl;
-            }
-            catch (const std::exception& e) {
+            } catch (const std::exception& e) {
                 std::cerr << "Failed to load fallback model '" << fallbackModelPath << "': " << e.what() << std::endl;
-                // No model could be loaded - this is a problem
                 packModel = nullptr; // Explicitly null
-                throw std::runtime_error("Failed to load any pack model."); // Or handle differently
+                throw std::runtime_error("Failed to load any pack model (pack.obj or cube.obj).");
             }
-        }
-        else {
+        } else {
             std::cerr << "Fallback model also not found at: " << fallbackModelPath << std::endl;
             std::cerr << "Searched relative to working directory: " << std::filesystem::current_path() << std::endl;
             throw std::runtime_error("Cannot find any model (pack.obj or cube.obj)");
         }
     }
+     std::cout << "[DEBUG] CardPack Constructor - textureManager ptr: " << textureManager << std::endl;
 }
 
 CardPack::~CardPack() {
-    // Resources will be cleaned up by unique_ptr
+    // unique_ptr handles mesh cleanup
 }
 
-// In CardPack::generateCards
-void CardPack::generateCards(CardDatabase& database) {
+void CardPack::generateCards(CardDatabase& database) { // database might not be needed now
     cards.clear();
-    int numCards = 10; // Or get from database settings
+    int numCards = 10; // Standard pack size
     cards.reserve(numCards);
 
-    glm::vec3 initialScale(0.8f, 0.8f, 0.8f); // Use consistent scale
+    std::cout << "Generating " << numCards << " cards for the pack..." << std::endl;
 
+    // Define possible Pokemon types (use API names where they differ)
     std::vector<std::string> typesToUse = {
        "Grass", "Fire", "Water", "Lightning", "Psychic",
-       "Fighting", "Darkness", "Metal", "Fairy", "Dragon", "Colorless"
-       // Using API names directly now
+       "Fighting", "Darkness", "Metal", "Dragon", "Colorless"
+       // Add "Fairy" if supporting older sets or if desired
     };
 
+    // Random number generation setup
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> typeDist(0, typesToUse.size() - 1);
+    std::uniform_real_distribution<> rareDist(0.0, 1.0); // For rare slot probability
+
+    // --- Pack Structure Logic ---
+    // Example: 7 Common/Uncommon, 2 Reverse Holo, 1 Rare Slot
+    const int numNormal = 7;
+    const int numReverse = 2;
+    // const int numRare = 1; // Implicitly the last card
+
     for (int i = 0; i < numCards; ++i) {
-        // Determine rarity (example logic)
-        std::string rarity = (i < 7) ? "normal" : (i < 9) ? "reverse" : "holo";
-        std::string cardType = typesToUse[i % typesToUse.size()];
-        std::string cardName = cardType + " Pokemon " + std::to_string(i + 1);
-        // Get actual card data from database eventually
+        std::string rarity = "normal"; // Default
+        std::string cardType = typesToUse[typeDist(gen)]; // Random type for each card
+
+        // --- Determine Rarity Based on Card Index ---
+        if (i < numNormal) {
+            rarity = "normal"; // These will query Common or Uncommon
+        } else if (i < numNormal + numReverse) {
+            rarity = "reverse"; // These query C/U but apply reverse holo shader
+        } else {
+            // This is the "Rare Slot" (last card, index 9)
+            float rareRoll = rareDist(gen);
+            // Define probabilities for the rare slot (adjust as desired)
+            // Example: 60% Holo, 25% EX/V etc., 15% Full Art/Secret
+            if (rareRoll < 0.60f) {
+                rarity = "holo"; // Standard Rare Holo
+            } else if (rareRoll < 0.85f) { // 0.60 + 0.25
+                rarity = "ex";     // Represents EX, V, GX, modern ex etc.
+            } else { // Remaining 15%
+                rarity = "full art"; // Represents Full Art, Secret, Illustration etc.
+            }
+            std::cout << "Rare slot (Card " << i << ") rolled " << rareRoll << ", assigned rarity: " << rarity << std::endl;
+        }
+
+        // Create a placeholder name - API will give the real one, but useful for logs
+        std::string cardName = cardType + " Pokemon (" + rarity + ")";
+
+        // --- Create Card Instance ---
+        // IMPORTANT: Pass the textureManager pointer!
         cards.emplace_back(cardName, cardType, rarity, textureManager);
+        Card& newCard = cards.back(); // Get reference to the newly added card
 
-        Card& newCard = cards.back();
+        // --- Generate and Assign Texture using TextureManager ---
+        // This now handles API fetch, download, loading, caching, and fallbacks
+        GLuint textureId = textureManager->generateCardTexture(newCard);
+        newCard.setTextureID(textureId); // Assign the resulting texture ID to the card
 
-        // Calculate initial position in the stack
+        if (textureId == 0) {
+             std::cerr << "WARNING: Failed to obtain a valid texture for card " << i << " (" << cardName << "). It may render incorrectly." << std::endl;
+             // The card will likely render black or using whatever texture 0 represents
+        }
+
+        // --- Set Initial Transform (in the stack, facing away) ---
         float zPos = stackCenter.z - i * stackSpacing;
         glm::vec3 initialPos = glm::vec3(stackCenter.x, stackCenter.y, zPos);
+        glm::vec3 initialRot = glm::vec3(0.0f, glm::radians(180.0f), 0.0f); // Start facing away
+        glm::vec3 initialScale(0.8f, 0.8f, 0.8f); // Example scale
 
         newCard.setPosition(initialPos);
-        newCard.setRotation(glm::vec3(0.0f, glm::radians(180.0f), 0.0f)); // Start facing away? Or towards (0 rad)
+        newCard.setRotation(initialRot);
         newCard.setScale(initialScale);
 
-        // Set initial target to its starting position (no animation yet)
-        newCard.setTargetTransform(initialPos, newCard.getRotation(), initialScale); // Use getRotation()
+        // Set initial target to its starting position (no animation until pack opens)
+        newCard.setTargetTransform(initialPos, initialRot, initialScale);
+
+        std::cout << "Generated Card " << i << ": Type=" << cardType << ", Rarity=" << rarity << ", Initial Z=" << zPos << ", TexID=" << textureId << std::endl;
     }
-    currentCardIndex = 0; // Reset index
-    state =  CLOSED; // Ensure state is reset if regenerating
-    std::cout << "Cards generated for stack. Vector size: " << cards.size() << std::endl;
+
+    currentCardIndex = 0; // Reset index for cycling
+    state = CLOSED;      // Ensure state is reset
+    std::cout << "Finished generating " << cards.size() << " cards." << std::endl;
 }
 
-// *** MODIFIED Signature ***
-// CardPack.cpp (render function only)
-
-// --- render ---
 void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, GLuint packTextureID) {
     if (state == CLOSED) {
-        // --- Render the Pack Model --- (Keep Existing Logic)
+        // --- Render the Pack Model ---
         if (packModel) {
-            glUseProgram(packShaderProgramID);
+            glUseProgram(packShaderProgramID); // Use the shader passed for the pack model
 
+            // Setup pack model matrix (translate, rotate, scale)
             glm::mat4 packModelMatrix = glm::mat4(1.0f);
             packModelMatrix = glm::translate(packModelMatrix, position);
             packModelMatrix = glm::rotate(packModelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
             packModelMatrix = glm::rotate(packModelMatrix, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
             packModelMatrix = glm::rotate(packModelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
-            // Add scaling if pack model needs it
-           // packModelMatrix = glm::scale(packModelMatrix, glm::vec3(0.5f));
+             //packModelMatrix = glm::scale(packModelMatrix, glm::vec3(0.5f)); // Optional scaling
 
+            // Set model matrix uniform
             GLint modelLoc = glGetUniformLocation(packShaderProgramID, "model");
-            if (modelLoc != -1) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(packModelMatrix));
-            // else std::cerr << "Warning: Uniform 'model' not found in pack shader." << std::endl;
-
-            GLint texLoc = glGetUniformLocation(packShaderProgramID, "diffuseTexture");
-            if (texLoc != -1 && packTextureID != 0) {
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, packTextureID);
-                glUniform1i(texLoc, 0);
+            if (modelLoc != -1) {
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(packModelMatrix));
+            } else {
+                 // Only warn once?
+                 // std::cerr << "Warning: Uniform 'model' not found in pack shader." << std::endl;
             }
-            // else { /* Warnings */ }
+            // Pass View and Projection matrices (assuming they are uniforms in pack shader too)
+            GLint viewLoc = glGetUniformLocation(packShaderProgramID, "view");
+            GLint projLoc = glGetUniformLocation(packShaderProgramID, "projection");
+             if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+             if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
-            packModel->draw();
-            glBindTexture(GL_TEXTURE_2D, 0);
+            // Set texture uniform
+            GLint texLoc = glGetUniformLocation(packShaderProgramID, "diffuseTexture");
+            if (texLoc != -1) {
+                if (packTextureID != 0) {
+                    glActiveTexture(GL_TEXTURE0); // Activate texture unit 0
+                    glBindTexture(GL_TEXTURE_2D, packTextureID);
+                    glUniform1i(texLoc, 0); // Tell shader to use texture unit 0
+                } else {
+                    glBindTexture(GL_TEXTURE_2D, 0); // Unbind if texture ID is invalid
+                    // Optionally set a default color if texture is missing
+                }
+            } else {
+                 // Only warn once?
+                 // std::cerr << "Warning: Uniform 'diffuseTexture' not found in pack shader." << std::endl;
+            }
+
+            packModel->draw(); // Draw the pack model
+            glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture unit 0
+        } else {
+            std::cerr << "Error: CardPack::render called in CLOSED state but packModel is null!" << std::endl;
         }
     }
     else if (state == REVEALING) {
         // --- Render Cards ---
-        //std::cout << "[DEBUG] CardPack::render() - textureManager ptr: " << textureManager
-        //    << ", CardShaderID Check: " << textureManager->getCardShaderID() // Use getter
-        //    << ", HoloShaderID Check: " << textureManager->getHoloShaderID() // Use getter
-        //    << std::endl;
-        float currentTime = static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f;
+        // Ensure textureManager is valid before proceeding
+        if (!textureManager) {
+            std::cerr << "Error: Cannot render cards, textureManager is null in CardPack." << std::endl;
+            return;
+        }
+
+        // Get current time for holo shader animation
+        // Ensure glut is initialized before calling this!
+        float currentTime = 0.0f;
+        // Just get elapsed time directly - if GLUT isn't initialized it will return 0
+        currentTime = static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f;
+
+        // Iterate through cards and render them
         for (const auto& card : cards) {
-            // Apply appropriate shader (Holo or Card)
-            // Ensure TextureManager has valid shaders!
+            // Determine if holo shader should be used based on rarity
             bool useHolo = (card.getRarity() == "holo" || card.getRarity() == "reverse" || card.getRarity() == "ex" || card.getRarity() == "full art");
-            bool shaderApplied = false; // Flag to track if a shader was attempted
+            bool shaderApplied = false; // Flag to track if a valid shader was applied
+
             if (useHolo) {
-                // --- Use the getter in the check ---
+                // Check if the holo shader ID is valid BEFORE applying
                 if (textureManager->getHoloShaderID() != 0) {
                     textureManager->applyHoloShader(card, currentTime);
-                    shaderApplied = true; // Mark shader as applied
+                    shaderApplied = true;
+                } else {
+                    // Log error if holo shader is needed but invalid
+                    static bool holoErrorLogged = false;
+                    if (!holoErrorLogged) {
+                        std::cerr << "Error: Holo shader ID is 0 in CardPack::render. Holo cards may not render effects." << std::endl;
+                        holoErrorLogged = true;
+                    }
+                    // Fallback: Try applying the regular card shader? Or render plain?
+                    // For now, we just won't apply a *valid* shader if holo is missing.
+                     if (textureManager->getCardShaderID() != 0) {
+                          textureManager->applyCardShader(card); // Use card shader as fallback
+                          shaderApplied = true; // Mark that *a* shader was applied
+                     }
                 }
-                else {
-                    std::cerr << "Error: Holo shader ID is 0 in CardPack::render. Skipping apply." << std::endl;
-                    // continue; // REMOVE continue for now
-                }
-            }
-            else {
-                // --- Use the getter in the check ---
+            } else {
+                // Use the regular card shader
+                 // Check if the card shader ID is valid BEFORE applying
                 if (textureManager->getCardShaderID() != 0) {
                     textureManager->applyCardShader(card);
-                    shaderApplied = true; // Mark shader as applied
-                }
-                else {
-                    std::cerr << "Error: Card shader ID is 0 in CardPack::render. Skipping apply." << std::endl;
-                    // continue; // REMOVE continue for now
+                    shaderApplied = true;
+                } else {
+                    // Log error if card shader is needed but invalid
+                    static bool cardErrorLogged = false;
+                     if (!cardErrorLogged) {
+                         std::cerr << "Error: Card shader ID is 0 in CardPack::render. Non-holo cards may not render correctly." << std::endl;
+                         cardErrorLogged = true;
+                     }
+                    // No valid shader available for this card
                 }
             }
 
-            // Render the card (Card::render uses its own position/rotation)
-            //card.render(viewMatrix, projectionMatrix);
-            if (shaderApplied) {
+            // Only render the card if a shader could be successfully applied
+            // and the card itself has a valid texture ID
+            if (shaderApplied && card.getTextureID() != 0) { // Added check for card's texture ID
+                // The Card::render function needs the view and projection matrices
+                // It will handle its own model matrix based on its position/rotation/scale
                 card.render(viewMatrix, projectionMatrix);
-            }
-            else {
-                std::cerr << "Skipping render for " << card.getPokemonName() << " due to invalid shader." << std::endl;
+            } else {
+                if (!shaderApplied) {
+                    // std::cerr << "Skipping render for " << card.getPokemonName() << " due to invalid or missing shader." << std::endl;
+                }
+                if (card.getTextureID() == 0) {
+                     // std::cerr << "Skipping render for " << card.getPokemonName() << " due to invalid texture ID (0)." << std::endl;
+                }
             }
         }
+         // After rendering all cards, maybe unbind the last used shader? Optional.
+         // glUseProgram(0);
     }
-    // Add rendering for FINISHED state if desired
+    // Add rendering for FINISHED state if different from REVEALING
 }
 
 void CardPack::update(float deltaTime) {
@@ -206,42 +301,51 @@ void CardPack::update(float deltaTime) {
         // std::cout << "Pack animation finished." << std::endl;
     }
 
-    // Update pack model rotation/position only if closed?
-    // if (state == asdCLOSED) {
-    //     // rotation.y += deltaTime * 0.1f; // Example idle rotation
-    // }
 }
 
-// --- startOpeningAnimation ---
 void CardPack::startOpeningAnimation() {
     if (state ==  CLOSED && !cards.empty()) {
         state =  REVEALING;
         currentCardIndex = 0;
         isAnimating = true; // Pack starts animating
 
-        // Set the first card's target to the front position
-        cards[currentCardIndex].setTargetTransform(frontPosition, glm::vec3(0.0f), cards[currentCardIndex].getScale());
+        // --- Set initial target positions for the reveal ---
+        // Move the first card (index 0) to the front position
+        cards[currentCardIndex].setTargetTransform(frontPosition, // Target Position
+                                                   glm::vec3(0.0f), // Target Rotation (face camera)
+                                                   cards[currentCardIndex].getScale()); // Keep original scale
 
-        // Optional: Set targets for other cards to slightly fan out or just stay put initially
+        // Move all other cards from their initial stack position slightly back
+        // to create the initial fan/stack effect for revealing.
         for (size_t i = 1; i < cards.size(); ++i) {
-            float zPos = stackCenter.z - i * stackSpacing;
-            glm::vec3 stackPos = glm::vec3(stackCenter.x, stackCenter.y, zPos);
-            cards[i].setTargetTransform(stackPos, cards[i].getRotation(), cards[i].getScale());
+            // Calculate target position in the visible stack (behind the front card)
+            float zPos = stackCenter.z - i * stackSpacing; // Use the original stack spacing for target
+            glm::vec3 targetPos = glm::vec3(stackCenter.x, stackCenter.y, zPos);
+
+            // Keep them facing away initially until cycled? Or turn them now? Let's keep facing away.
+            glm::vec3 targetRot = cards[i].getRotation(); // Keep initial rotation (facing away)
+            glm::vec3 targetScale = cards[i].getScale();  // Keep initial scale
+
+            cards[i].setTargetTransform(targetPos, targetRot, targetScale);
         }
 
-        std::cout << "Pack opening, state = REVEALING. Card " << currentCardIndex << " moving to front." << std::endl;
+        std::cout << "Pack opening animation started. State = REVEALING. Card " << currentCardIndex << " moving to front." << std::endl;
+    } else if (state == CLOSED && cards.empty()) {
+         std::cerr << "Cannot start opening animation: No cards generated." << std::endl;
+    } else {
+         std::cout << "Pack already opening or opened." << std::endl;
     }
 }
 
-// --- cycleCard ---
 void CardPack::cycleCard() {
-    if (state !=  REVEALING || cards.empty()) {
-        return; // Can only cycle in this state
+     // Can only cycle if in REVEALING state and not currently mid-animation
+    if (state != REVEALING || cards.empty()) {
+        std::cerr << "Cannot cycle card. State: " << state << ", Card count: " << cards.size() << std::endl;
+        return;
     }
 
-    // Optional: Prevent cycling if previous animation isn't finished
+    // Prevent cycling if the pack is still animating cards into position
     if (isAnimating) {
-        // Check if all cards have stopped animating
         bool stillMoving = false;
         for (const auto& card : cards) {
             if (card.isCardAnimating()) {
@@ -249,65 +353,75 @@ void CardPack::cycleCard() {
                 break;
             }
         }
-        if (stillMoving) return; // Wait for previous animation
-        else isAnimating = false; // Reset pack animating flag
+        if (stillMoving) {
+            std::cout << "Cannot cycle card yet, animation in progress." << std::endl;
+            return; // Wait for the current animation to finish
+        }
+         else {
+            isAnimating = false; // Reset flag if movement just finished
+        }
     }
 
+    // --- Start cycle animation ---
+    isAnimating = true; // Mark that a new animation is starting
 
-    // --- Start new cycle animation ---
-    isAnimating = true;
-
-    // 1. Identify current front card
+    // 1. Identify current front card index
     int frontCardIdx = currentCardIndex;
 
-    // 2. Identify the next card to bring to front
+    // 2. Identify the next card index to bring to the front
     int nextCardIdx = (currentCardIndex + 1) % cards.size();
 
     // 3. Calculate target position for the card moving to the back
-    // Place it behind the last card's initial stack position
-    float backZ = stackCenter.z - (cards.size()) * stackSpacing + backPositionOffset.z;
-    glm::vec3 targetBackPos = glm::vec3(stackCenter.x + backPositionOffset.x, stackCenter.y + backPositionOffset.y, backZ);
-    glm::vec3 targetBackRot = glm::vec3(0.0f, glm::radians(180.0f), 0.0f); // Rotate to face away
+    // Place it behind the *last* card's initial stack position + offset
+    // We need to find where the "end" of the stack is now dynamically based on card positions?
+    // Or simpler: just place it relative to the original stack center but far back.
+    float backZ = stackCenter.z - (cards.size()) * stackSpacing + backPositionOffset.z; // Z behind original stack
+    glm::vec3 targetBackPos = glm::vec3(stackCenter.x + backPositionOffset.x,
+                                      stackCenter.y + backPositionOffset.y,
+                                      backZ);
+    glm::vec3 targetBackRot = glm::vec3(0.0f, glm::radians(180.0f), 0.0f); // Rotate to face away at the back
 
     // 4. Set targets
+    // Move current front card to the calculated back position
     cards[frontCardIdx].setTargetTransform(targetBackPos, targetBackRot, cards[frontCardIdx].getScale());
-    cards[nextCardIdx].setTargetTransform(frontPosition, glm::vec3(0.0f), cards[nextCardIdx].getScale()); // Bring next card to front, facing camera
+    // Move the next card to the front position, facing the camera
+    cards[nextCardIdx].setTargetTransform(frontPosition, glm::vec3(0.0f), cards[nextCardIdx].getScale());
 
-    // 5. Update index
+    // 5. Update the current card index
     currentCardIndex = nextCardIdx;
 
     std::cout << "Cycling card. Card " << frontCardIdx << " moving to back. Card " << currentCardIndex << " moving to front." << std::endl;
 
-    // Optional: Check if we've cycled all cards
-    // if (currentCardIndex == 0 && frontCardIdx == cards.size() - 1) { // Just completed a full loop
-    //     // state =  FINISHED;
+    // Optional: Transition to FINISHED state after a full cycle?
+    // if (currentCardIndex == 0) { // Just completed a full loop
+    //     // state = FINISHED;
     //     // std::cout << "All cards cycled." << std::endl;
     // }
 }
 
 bool CardPack::isCycleComplete() const {
-    // Implement logic if needed, e.g., return true if state ==  FINISHED
-    return state ==  FINISHED;
+    return state == FINISHED;
 }
 
-// --- Keep rotate/setPosition for pack ---
 void CardPack::rotate(float x, float y, float z) {
-    if (state ==  CLOSED) { // Only rotate pack model
+    if (state == CLOSED) { // Only rotate pack model when closed
         rotation.x += x;
         rotation.y += y;
         rotation.z += z;
+    } else {
+        // Maybe rotate the whole card stack? More complex.
     }
 }
 
 void CardPack::setPosition(float x, float y, float z) {
-    if (state ==  CLOSED) { // Only position pack model
+    if (state == CLOSED) { // Only position pack model when closed
         position = glm::vec3(x, y, z);
+    } else {
+         // Maybe move the whole card stack? Requires adjusting stackCenter etc.
     }
 }
 
 bool CardPack::isPointInside(float x, float y) const {
-    // Basic implementation - can be enhanced with proper collision detection
-    // Convert screen coordinates to world space and check if inside the pack's bounding box
-    // This is a placeholder for now
+    // Placeholder - requires proper ray casting or BBox check in world space
     return false;
 }

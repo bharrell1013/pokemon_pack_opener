@@ -5,60 +5,69 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <list>
 
 // Forward declaration
 class Card;
 
 class TextureManager {
 private:
-    std::map<std::string, GLuint> textureMap;
-    GLuint cardShader;             // Shader program for cards
-    GLuint holoShader;             // Special shader for holo effects
-    GLuint currentShader;          // Currently active shader
+    // --- Texture Management ---
+    std::map<std::string, GLuint> textureMap;  // Cache for loaded textures
+    std::map<std::string, std::list<std::string>> apiUrlCache; // Cache for API query results
 
-    // --- API ---
-    const std::string apiKey = "56f39a72-5758-495c-ac18-134248507b5a"; // Your API Key
+    // --- Shader Programs ---
+    GLuint cardShader = 0;        // Standard card shader program
+    GLuint holoShader = 0;        // Holographic effect shader program
+    GLuint currentShader = 0;     // Currently active shader program
+
+    // --- API Configuration ---
+    const std::string apiKey = "56f39a72-5758-495c-ac18-134248507b5a";
     const std::string apiBaseUrl = "https://api.pokemontcg.io/v2/cards";
 
-    // Helper methods for shader compilation
+    // --- Private Helper Methods ---
+    // Shader Management
     GLuint createShaderProgram(const std::string& vertexPath, const std::string& fragmentPath);
     std::string loadShaderSource(const std::string& path);
-    int getTypeValue(const std::string& type);
-    int getRarityValue(const std::string& rarity);
+    
+    // Type/Rarity Conversion
+    int getTypeValue(const std::string& type);      // Converts Pokemon type to shader value
+    int getRarityValue(const std::string& rarity);  // Converts card rarity to shader value
 
-    // Downloads image data from a URL into a buffer
-    std::vector<unsigned char> downloadImageData(const std::string& imageUrl);
-    // Loads texture from memory buffer
+    // API & Image Loading
+    std::vector<unsigned char> downloadImageData(const std::string& imageUrl);  // Downloads image data from URL
     GLuint loadTextureFromMemory(const std::vector<unsigned char>& imageData, const std::string& cacheKey);
-    // Fetches card data from API and returns image URL
-    std::string fetchCardImageUrl(const Card& card);
-    // Maps your rarity string to API rarity search term
-    std::string mapRarityToApiQuery(const std::string& rarity);
+    std::string fetchCardImageUrl(const Card& card);  // Gets image URL from Pokemon TCG API
+    std::string mapRarityToApiQuery(const std::string& rarity);  // Converts rarity to API query
 
 public:
     TextureManager();
     ~TextureManager();
 
-    // Texture loading
-    // Tries local path first, then URL download if applicable
+    // --- Texture Loading ---
+    // Loads texture from file or URL, with caching
     GLuint loadTexture(const std::string& pathOrUrl);
+    // Retrieves cached texture by name/path/URL
+    GLuint getTexture(const std::string& textureName);
 
-    GLuint getTexture(const std::string& textureName); // Used for caching lookup
-
-    // Card texture generation
-    // Will now attempt API fetch
+    // --- Card Texture Generation ---
+    // Generates card texture using API or fallbacks
     GLuint generateCardTexture(const Card& card);
+    // Applies holographic effect (may use FBO in future)
     GLuint generateHoloEffect(GLuint baseTexture, const std::string& rarity);
 
-    // Shader management
-    void applyCardShader(const Card& card);
-    void applyHoloShader(const Card& card, float time);
-    GLuint getCurrentShader() const { return currentShader; }
-    GLuint getCardShaderID() const { return cardShader; }     // Add this
-    GLuint getHoloShaderID() const { return holoShader; }     // Add this
-
-    // Initialize shaders
+    // --- Shader Management ---
+    // Initialize all shader programs
     void initializeShaders();
+    // Apply appropriate shader for card rendering
+    void applyCardShader(const Card& card);
+    // Apply holographic effect shader with time parameter
+    void applyHoloShader(const Card& card, float time);
+
+    // --- Shader State Getters ---
+    GLuint getCurrentShader() const { return currentShader; }
+    GLuint getCardShaderID() const { return cardShader; }
+    GLuint getHoloShaderID() const { return holoShader; }
 };
 
 #endif

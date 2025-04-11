@@ -3,47 +3,67 @@ out vec4 FragColor;
 
 in vec2 TexCoord;
 
-uniform sampler2D cardTexture;
-uniform int cardType;    // Pokemon type (0-11 for different types)
-uniform int cardRarity;  // Card rarity (0-4 for different rarities)
+uniform sampler2D baseTexture;    // Renamed from cardTexture for clarity
+uniform sampler2D overlayTexture; // NEW: L-System Overlay
+uniform int cardType;             // Keep for potential future use, but tinting might be less needed now
+uniform int cardRarity;           // Keep for potential future use
 
-// Type-based color tints
+// Optional: Define how much the overlay affects the base
+uniform float overlayIntensity = 0.6; // Adjust for subtle effect
+
+// Optional: Type colors if you still want some tinting
 const vec3 typeColors[12] = vec3[12](
-    vec3(0.8, 0.8, 0.8),   // Normal
-    vec3(1.0, 0.4, 0.2),   // Fire
-    vec3(0.2, 0.4, 1.0),   // Water
-    vec3(0.4, 0.8, 0.2),   // Grass
-    vec3(1.0, 0.8, 0.0),   // Electric
-    vec3(0.8, 0.2, 0.8),   // Psychic
-    vec3(0.8, 0.4, 0.0),   // Fighting
-    vec3(0.4, 0.2, 0.4),   // Dark
-    vec3(0.6, 0.4, 1.0),   // Dragon
-    vec3(1.0, 0.6, 0.8),   // Fairy
-    vec3(0.6, 0.6, 0.8),   // Steel
-    vec3(0.4, 0.2, 0.6)    // Ghost
+    vec3(0.8, 0.8, 0.8), vec3(1.0, 0.4, 0.2), vec3(0.2, 0.4, 1.0),
+    vec3(0.4, 0.8, 0.2), vec3(1.0, 0.8, 0.0), vec3(0.8, 0.2, 0.8),
+    vec3(0.8, 0.4, 0.0), vec3(0.4, 0.2, 0.4), vec3(0.6, 0.4, 1.0),
+    vec3(1.0, 0.6, 0.8), vec3(0.6, 0.6, 0.8), vec3(0.4, 0.2, 0.6)
 );
 
 void main()
 {
-    // Sample base texture
-    vec4 texColor = texture(cardTexture, TexCoord);
-    
-    // Apply type-based color tint
-    vec3 typeColor = typeColors[cardType];
-    vec3 finalColor = mix(texColor.rgb, typeColor, 0.2); // Subtle type-based tinting
-    
-    // Adjust based on rarity
-    float brightness = 1.0;
-    float contrast = 1.0;
-    
+    // Sample overlay texture (L-System)
+    vec4 overlayColor = texture(overlayTexture, TexCoord);
+
+    // Sample base texture (API image)
+    vec4 baseColor = texture(baseTexture, TexCoord);
+
+    // --- Blending Logic ---
+    // Option 1: Additive Blend (Makes things brighter where overlay exists)
+     vec3 blendedColor = baseColor.rgb + overlayColor.rgb * overlayColor.a * overlayIntensity;
+
+    // Option 2: Alpha Blend (Overlay drawn 'on top' based on its alpha)
+    // vec3 blendedColor = mix(baseColor.rgb, overlayColor.rgb, overlayColor.a * overlayIntensity);
+
+    // Option 3: Multiplicative Blend (Darkens/tints based on overlay)
+    // vec3 blendedColor = baseColor.rgb * mix(vec3(1.0), overlayColor.rgb, overlayColor.a * overlayIntensity);
+
+    // Option 4: Screen Blend (Brighter, good for light patterns)
+     //vec3 blendedColor = vec3(1.0) - (vec3(1.0) - baseColor.rgb) * (vec3(1.0) - overlayColor.rgb * overlayIntensity);
+     //blendedColor = mix(baseColor.rgb, blendedColor, overlayColor.a); // Use overlay alpha
+
+     // --- !!! TEMPORARY: Force Usage of Uniforms !!! ---
+    // Add a slight tint based on type and rarity just to ensure they are used
+    // This prevents the compiler from optimizing them away.
     if (cardRarity > 0) {
-        brightness = 1.1;  // Slightly brighter for rare cards
-        contrast = 1.2;    // More contrast for rare cards
+       blendedColor.r += 0.001 * float(cardRarity); // Tiny modification using rarity
     }
-    
-    // Apply brightness and contrast
-    finalColor = (finalColor - 0.5) * contrast + 0.5;
-    finalColor *= brightness;
-    
-    FragColor = vec4(finalColor, texColor.a);
+    if (cardType >= 0 && cardType < 12) {
+       blendedColor.g += 0.001 * float(cardType); // Tiny modification using type
+    }
+    // --- End Temporary Usage ---
+
+
+    // --- Optional: Apply previous rarity/type adjustments if still desired ---
+    // vec3 finalColor = blendedColor; // Start with blended result
+    // vec3 typeColor = typeColors[cardType];
+    // finalColor = mix(finalColor, typeColor, 0.1); // Even more subtle tint now
+
+    // float brightness = 1.0 + float(cardRarity > 0) * 0.05; // Less adjustment maybe
+    // float contrast = 1.0 + float(cardRarity > 0) * 0.1;
+    // finalColor = (finalColor - 0.5) * contrast + 0.5;
+    // finalColor *= brightness;
+
+    // Ensure final alpha uses base texture's alpha (or 1.0 if base is opaque)
+    FragColor = vec4(clamp(blendedColor, 0.0, 1.0), baseColor.a);
+    //FragColor = texture(overlayTexture, TexCoord);
 }

@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 #include <list>
+#include "LSystem.hpp"
+#include "LSystemRenderer.hpp"
 
 // Forward declaration
 class Card;
@@ -40,10 +42,6 @@ private:
     // Shader Management
     GLuint createShaderProgram(const std::string& vertexPath, const std::string& fragmentPath);
     std::string loadShaderSource(const std::string& path);
-    
-    // Type/Rarity Conversion
-    int getTypeValue(const std::string& type);      // Converts Pokemon type to shader value
-    int getRarityValue(const std::string& rarity);  // Converts card rarity to shader value
 
     // API & Image Loading
     std::vector<unsigned char> downloadImageData(const std::string& imageUrl);  // Downloads image data from URL
@@ -63,9 +61,15 @@ public:
     // Retrieves cached texture by name/path/URL
     GLuint getTexture(const std::string& textureName);
 
+    // Type/Rarity Conversion
+    int getTypeValue(const std::string& type);      // Converts Pokemon type to shader value
+    int getRarityValue(const std::string& rarity);  // Converts card rarity to shader value
+
     // --- Card Texture Generation ---
     // Generates card texture using API or fallbacks
     GLuint generateCardTexture(const Card& card);
+    // Generates procedural overlay texture using L-Systems based on card properties
+    GLuint generateProceduralOverlayTexture(const Card& card);
     // Applies holographic effect (may use FBO in future)
     GLuint generateHoloEffect(GLuint baseTexture, const std::string& rarity);
 

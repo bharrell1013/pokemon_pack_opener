@@ -26,28 +26,6 @@ Application::~Application() {
     // Resources will be cleaned up by unique_ptr
 }
 
-//void Application::initialize(int argc, char** argv) {
-//    // Initialize GLUT
-//    glutInit(&argc, argv);
-//    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
-//    glutInitWindowSize(800, 600);
-//    glutCreateWindow("Pok�mon Pack Simulator");
-//
-//    // Setup GLUT callbacks
-//    glutDisplayFunc(displayCallback);
-//    glutReshapeFunc(reshapeCallback);
-//    glutKeyboardFunc(keyboardCallback);
-//    glutMouseFunc(mouseCallback);
-//    glutMotionFunc(motionCallback);
-//    glutIdleFunc(idleCallback);
-//
-//    // Initialize OpenGL
-//    glEnable(GL_DEPTH_TEST);
-//    glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-//
-//    // Generate a card pack
-//    cardPack->generateCards(*cardDatabase);
-//}
 void Application::initialize(int argc, char** argv) {
     std::cout << "Application::initialize START" << std::endl;
 

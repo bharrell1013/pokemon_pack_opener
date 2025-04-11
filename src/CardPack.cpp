@@ -135,6 +135,14 @@ void CardPack::generateCards(CardDatabase& database) { // database might not be 
              // The card will likely render black or using whatever texture 0 represents
         }
 
+        GLuint overlayTextureId = textureManager->generateProceduralOverlayTexture(newCard);
+        newCard.setOverlayTextureID(overlayTextureId); // Assign OVERLAY texture ID
+
+        if (overlayTextureId == 0) {
+            std::cerr << "WARNING: Failed to obtain a valid OVERLAY texture for card " << i << " (" << cardName << ")." << std::endl;
+            // Card will render without overlay if this fails
+        }
+
         // --- Set Initial Transform (in the stack, facing away) ---
         float zPos = stackCenter.z - i * stackSpacing;
         glm::vec3 initialPos = glm::vec3(stackCenter.x, stackCenter.y, zPos);
@@ -148,7 +156,7 @@ void CardPack::generateCards(CardDatabase& database) { // database might not be 
         // Set initial target to its starting position (no animation until pack opens)
         newCard.setTargetTransform(initialPos, initialRot, initialScale);
 
-        std::cout << "Generated Card " << i << ": Type=" << cardType << ", Rarity=" << rarity << ", Initial Z=" << zPos << ", TexID=" << textureId << std::endl;
+        std::cout << "Generated Card " << i << ": Type=" << cardType << ", Rarity=" << rarity << ", Initial Z=" << zPos << ", TexID=" << textureId << ", OverlayTexID=" << overlayTextureId << std::endl;
     }
 
     currentCardIndex = 0; // Reset index for cycling

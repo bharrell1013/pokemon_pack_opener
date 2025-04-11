@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iomanip>
 #include <functional>
+#include <glm/gtc/random.hpp>
 
 // --- Dependencies for API ---
 #include <cpr/cpr.h>         // For HTTP requests
@@ -1032,4 +1033,181 @@ std::string TextureManager::getCacheFilename(const std::string& url) const {
     // Use hex representation of the hash. Add a common extension.
     ss << imageCacheDirectory << std::hex << urlHash << ".png_cache";
     return ss.str();
+}
+
+GLuint TextureManager::generateProceduralOverlayTexture(const Card& card) {
+    // --- 1. Generate Cache Key ---
+    // Key based on unique card properties affecting the overlay
+    std::string cacheKey = "lsys_overlay_" + card.getRarity() + "_" + card.getPokemonType() + "_v3";
+    // Optional: Add more factors like a version number if you change L-systems later
+    // cacheKey += "_v1";
+
+    // --- 2. Check Cache ---
+    auto it = textureMap.find(cacheKey);
+    if (it != textureMap.end()) {
+        // std::cout << "[Overlay Gen] Cache hit for: " << cacheKey << std::endl;
+        return it->second; // Return cached texture ID
+    }
+
+    std::cout << "[Overlay Gen] Cache miss for: " << cacheKey << ". Generating..." << std::endl;
+
+    // --- 3.1 Determine Texture Dimensions and Create Renderer EARLY ---
+    int texWidth = 256;
+    int texHeight = 256;
+    LSystemRenderer renderer(texWidth, texHeight); // <<< CREATE RENDERER HERE
+    renderer.clearBuffer(glm::vec3(0.0f)); // <<< CLEAR BUFFER ONCE HERE
+
+    // --- 3.2 Setup L-System based on Rarity/Type ---
+    LSystem lSystem;
+    int iterations = 4; // Default iterations
+    float step = 3.0f;
+    float angle = 22.5f;
+    glm::vec3 startColor = glm::vec3(1.0f); // Default white overlay
+    glm::vec2 startPos = glm::vec2(texWidth / 2.0f, texHeight / 2.0f); // Start at center
+    float startAngle = 90.0f; // Start facing up
+	int numPasses = 1; // Default to 1 pass
+    int lineThickness = 2; // Default thickness
+
+    std::string rarity = card.getRarity();
+    std::string type = card.getPokemonType();
+
+    static const glm::vec3 typeBasedHoloColors[] = {
+        glm::vec3(1.0f, 0.0f, 0.0f), // Red
+        glm::vec3(0.0f, 1.0f, 0.0f), // Green
+        glm::vec3(0.0f, 0.0f, 1.0f)  // Blue
+        // You can add additional colors if needed.
+    };
+
+    if (rarity == "normal") {
+        // Simple deformation - e.g., subtle wavy lines or branching
+        iterations = 3;
+        lSystem.setAxiom("F");
+        lSystem.addRule('F', "F[-F][+F]F"); // More symmetrical branching maybe? Or F[+F]F[-F]F
+        angle = glm::linearRand(25.0f, 45.0f); // Widen angle variation
+        step = 4.0f; // Smaller step can make denser patterns
+        startColor = glm::vec3(0.7f, 0.7f, 0.7f); // Keep greyish
+        // --- NEW: Random Start Angle & Multiple Passes ---
+        numPasses = 15; // Set number of passes for normal
+		lineThickness = 1; // Set line thickness for normal
+
+        // Generate the L-System string ONCE if rules/iterations are fixed for all passes
+        std::string lsystemStringPass = lSystem.generate(iterations);
+        if (lsystemStringPass.empty()) { /* handle error, return 0 */ }
+
+        for (int p = 0; p < numPasses; ++p) {
+            startPos = glm::vec2(glm::linearRand(texWidth * 0.1f, texWidth * 0.9f), // Widen start area
+                glm::linearRand(texHeight * 0.1f, texHeight * 0.9f));
+            startAngle = glm::linearRand(0.0f, 360.0f);
+            glm::vec3 passColor = startColor * glm::linearRand(0.7f, 1.0f);
+
+            // Set parameters FOR THIS PASS
+            renderer.setParameters(step, angle, passColor, startPos, startAngle);
+            // Render THIS pass onto the existing buffer
+            renderer.render(lsystemStringPass); // Assumes render doesn't clear buffer
+        }
+        // --- End Multiple Passes ---
+    }
+    else if (rarity == "reverse" || rarity == "holo") {
+        // Dense, overlapping, colored pattern for full coverage holo
+        iterations = 5; // More iterations needed for density
+        // Rule for dense branching/filling
+        lSystem.setAxiom("X");
+        lSystem.addRule('X', "F[-X][+X]FX"); // Good branching rule
+        lSystem.addRule('F', "FF");          // Lines get longer/denser
+        angle = glm::linearRand(20.0f, 25.0f); // Consistent small angle
+        step = 2.0f; // Small steps for density
+        numPasses = 30; // MANY passes from random points
+        lineThickness = 2; // Standard thickness
+
+        int typeIndex = getTypeValue(type);
+        startColor = (typeIndex >= 0 && typeIndex < 12) ? (typeBasedHoloColors[typeIndex] * 0.7f + 0.3f) : glm::vec3(0.8f);
+
+        std::string lsystemStringPass = lSystem.generate(iterations);
+        if (lsystemStringPass.empty()) { /* error */ return 0; }
+        renderer.setLineThickness(lineThickness);
+
+        for (int p = 0; p < numPasses; ++p) {
+            glm::vec2 startPos(glm::linearRand(0.0f, (float)texWidth),
+                glm::linearRand(0.0f, (float)texHeight));
+            float startAngle = glm::linearRand(0.0f, 360.0f);
+            // Vary color slightly per pass for more visual interest
+            glm::vec3 passColor = startColor * glm::linearRand(0.7f, 1.3f);
+            renderer.setParameters(step, angle, glm::clamp(passColor, 0.0f, 1.0f), startPos, startAngle);
+            renderer.render(lsystemStringPass);
+        }
+
+    }
+    else if (rarity == "ex" || rarity == "full art") {
+        // Generate a "sparkle map" using dots
+        iterations = 7; // High iterations for many dots
+        lSystem.setAxiom("A");
+        // Rules using the '.' dot command, turning randomly
+        lSystem.addRule('A', ". F [+A] [-A] F A"); // Draw dot, move, turn, branch
+        lSystem.addRule('F', "F"); // Move command (can be short)
+        angle = glm::linearRand(45.0f, 135.0f); // Random turns
+        step = 1.0; // Very short step just to move between dots
+        numPasses = 50; // LOTS of passes/starting points for random dots
+        lineThickness = 2; // Make dots 2x2
+        startColor = glm::vec3(1.0f); // Draw dots as white
+
+        std::string lsystemStringPass = lSystem.generate(iterations);
+        if (lsystemStringPass.empty()) { /* error */ return 0; }
+        renderer.setLineThickness(lineThickness);
+
+        for (int p = 0; p < numPasses; ++p) {
+            glm::vec2 startPos(glm::linearRand(0.0f, (float)texWidth),
+                glm::linearRand(0.0f, (float)texHeight));
+            float startAngle = glm::linearRand(0.0f, 360.0f);
+            // Color is always white for sparkle map intensity
+            renderer.setParameters(step, angle, startColor, startPos, startAngle);
+            renderer.render(lsystemStringPass);
+        }
+    }
+        const std::vector<unsigned char>& overlayPixelData = renderer.getPixelData(); // Get data after all passes
+        if (overlayPixelData.empty() || overlayPixelData.size() != static_cast<size_t>(texWidth) * texHeight * 4) {
+            std::cerr << "Error: L-System rendering failed or produced invalid data for " << cacheKey << std::endl;
+            return 0; // Indicate failure
+        }
+
+    // --- 7. Upload to OpenGL ---
+    GLuint overlayTextureID = 0;
+    glGenTextures(1, &overlayTextureID);
+    if (overlayTextureID == 0) {
+        std::cerr << "OpenGL Error: Failed to generate texture ID for overlay " << cacheKey << std::endl;
+        return 0;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, overlayTextureID);
+
+    // Set texture parameters
+    // GL_NEAREST might be good for sharp L-system lines initially
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // Use mipmaps
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // How should the pattern repeat or clamp? Repeat is often good for overlays.
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    // Upload the pixel data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, // Internal format
+                 texWidth, texHeight, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, // Format and type of input data
+                 overlayPixelData.data());
+    glGenerateMipmap(GL_TEXTURE_2D); // Generate mipmaps
+
+    // Check for errors during texture creation
+     GLenum err;
+     while ((err = glGetError()) != GL_NO_ERROR) {
+         std::cerr << "OpenGL Texture Error (Overlay " << cacheKey << "): " << err << std::endl;
+         glDeleteTextures(1, &overlayTextureID); // Clean up failed texture
+         glBindTexture(GL_TEXTURE_2D, 0);
+         return 0; // Indicate failure
+     }
+
+    glBindTexture(GL_TEXTURE_2D, 0); // Unbind
+
+    // --- 8. Update Cache ---
+    textureMap[cacheKey] = overlayTextureID;
+    std::cout << "[Overlay Gen] Generated and cached texture ID " << overlayTextureID << " for: " << cacheKey << std::endl;
+
+    return overlayTextureID;
 }

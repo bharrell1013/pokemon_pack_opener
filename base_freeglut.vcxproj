@@ -184,6 +184,8 @@ xcopy "$(ProjectDir)textures" "$(OutDir)textures\" /Y /I /S /E</Command>
     <ClCompile Include="src\Card.cpp" />
     <ClCompile Include="src\CardDatabase.cpp" />
     <ClCompile Include="src\CardPack.cpp" />
+    <ClCompile Include="src\LSystem.cpp" />
+    <ClCompile Include="src\LSystemRenderer.cpp" />
     <ClCompile Include="src\TextureManager.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -196,12 +198,18 @@ xcopy "$(ProjectDir)textures" "$(OutDir)textures\" /Y /I /S /E</Command>
     <ClInclude Include="src\CardDatabase.hpp" />
     <ClInclude Include="src\CardPack.hpp" />
     <ClInclude Include="src\InputHandler.hpp" />
+    <ClInclude Include="src\LSystem.hpp" />
+    <ClInclude Include="src\LSystemRenderer.hpp" />
     <ClInclude Include="src\stb_image.h" />
     <ClInclude Include="src\TextureManager.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders/v.glsl" />
     <None Include="shaders/f.glsl" />
+    <None Include="shaders\card_f.glsl" />
+    <None Include="shaders\card_v.glsl" />
+    <None Include="shaders\holo_f.glsl" />
+    <None Include="shaders\holo_v.glsl" />
     <None Include="shaders\line_f.glsl" />
     <None Include="shaders\line_v.glsl" />
     <None Include="shaders\pack_f.glsl" />

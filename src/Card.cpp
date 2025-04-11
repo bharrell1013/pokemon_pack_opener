@@ -14,6 +14,7 @@ Card::Card(std::string name, std::string type, std::string rarity, TextureManage
     pokemonType(std::move(type)),
     rarity(std::move(rarity)),
     textureID(0),                         // Initialize textureID to 0 (invalid)
+    overlayTextureID(0),                  // Initialize overlay texture ID to 0 (invalid)
     textureManager(texManager),           // Store pointer to TextureManager
     position(glm::vec3(0.0f)),            // Initial position
     rotation(glm::vec3(0.0f)),            // Initial rotation
@@ -53,6 +54,7 @@ Card::Card(const Card& other) :
     pokemonType(other.pokemonType),
     rarity(other.rarity),
     textureID(other.textureID), // Texture Manager owns texture, just copy ID
+    overlayTextureID(other.overlayTextureID),
     cardMesh(other.cardMesh),   // Share the mesh pointer
     textureManager(other.textureManager),
     position(other.position),
@@ -76,6 +78,7 @@ Card& Card::operator=(const Card& other) {
         pokemonType = other.pokemonType;
         rarity = other.rarity;
         textureID = other.textureID;
+        overlayTextureID = other.overlayTextureID;
         cardMesh = other.cardMesh;
         textureManager = other.textureManager;
         position = other.position;
@@ -99,6 +102,7 @@ Card::Card(Card&& other) noexcept :
     pokemonType(std::move(other.pokemonType)),
     rarity(std::move(other.rarity)),
     textureID(other.textureID),
+    overlayTextureID(other.overlayTextureID),
     cardMesh(std::move(other.cardMesh)),
     textureManager(other.textureManager),
     position(other.position),
@@ -114,6 +118,7 @@ Card::Card(Card&& other) noexcept :
     isRevealed(other.isRevealed)
 {
     other.textureID = 0; // Prevent double deletion if Card destructor managed it
+    other.overlayTextureID = 0;
     other.textureManager = nullptr;
 }
 
@@ -124,6 +129,7 @@ Card& Card::operator=(Card&& other) noexcept {
         pokemonType = std::move(other.pokemonType);
         rarity = std::move(other.rarity);
         textureID = other.textureID;
+        overlayTextureID = other.overlayTextureID;
         cardMesh = std::move(other.cardMesh);
         textureManager = other.textureManager;
         position = other.position;
@@ -139,6 +145,7 @@ Card& Card::operator=(Card&& other) noexcept {
         isRevealed = other.isRevealed;
 
         other.textureID = 0;
+        other.overlayTextureID = 0;
         other.textureManager = nullptr;
     }
     return *this;
@@ -216,73 +223,119 @@ void Card::update(float deltaTime) {
 // --- render ---
 void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix) const {
     // 1. --- Sanity Checks ---
-    if (!cardMesh) {
-        std::cerr << "Error: Card::render - Cannot render '" << pokemonName << "', mesh is null." << std::endl;
-        return;
+    if (!cardMesh) { /* ... error ... */ return; }
+    if (!textureManager) { /* ... error ... */ return; }
+    // Check BOTH texture IDs now
+    if (textureID == 0) {
+         // std::cerr << "Warning: Card::render - Rendering '" << pokemonName << "' with BASE texture ID 0." << std::endl;
     }
-    if (!textureManager) {
-        std::cerr << "Error: Card::render - Cannot render '" << pokemonName << "', textureManager is null." << std::endl;
-        return;
-    }
-     // Texture ID 0 might be valid if you have a placeholder bound to it,
-     // but often indicates an error. Render anyway, but maybe log a warning.
-     if (textureID == 0) {
-         // std::cerr << "Warning: Card::render - Rendering '" << pokemonName << "' with texture ID 0." << std::endl;
+     if (overlayTextureID == 0) {
+         // This is less critical, the card can render without overlay, but log maybe.
+         // std::cout << "Info: Card::render - Rendering '" << pokemonName << "' without overlay (Overlay ID 0)." << std::endl;
      }
 
     // 2. --- Get Active Shader ---
-    // Assume the correct shader (card or holo) was already activated by CardPack::render
-    // using textureManager->applyCardShader or textureManager->applyHoloShader.
+    // This logic in CardPack::render or TextureManager::apply*Shader should remain the same.
+    // We just assume the correct shader (cardShader or holoShader) is already bound.
     GLuint currentShader = textureManager->getCurrentShader();
-    if (currentShader == 0) {
-        // This indicates an issue in the calling code (CardPack::render) or shader initialization
-        std::cerr << "Error: Card::render - TextureManager reports current shader ID is 0 for '" << pokemonName << "'. Cannot render." << std::endl;
-        return;
-    }
+    if (currentShader == 0) { /* ... error ... */ return; }
 
-    // 3. --- Calculate Model Matrix ---
-    // Use the *current* (potentially interpolated) position, rotation, and scale.
+    // 3. --- Calculate Model Matrix --- (Remains the same)
     glm::mat4 modelMatrix = glm::mat4(1.0f);
+    // ... (translate, rotate, scale using current position, rotation, scale) ...
     modelMatrix = glm::translate(modelMatrix, position);
-    // Apply rotations - order might matter depending on desired effect (e.g., YXZ common)
-    modelMatrix = glm::rotate(modelMatrix, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f)); // Yaw
-    modelMatrix = glm::rotate(modelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f)); // Pitch
-    modelMatrix = glm::rotate(modelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f)); // Roll
+    modelMatrix = glm::rotate(modelMatrix, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
+    modelMatrix = glm::rotate(modelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
+    modelMatrix = glm::rotate(modelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
     modelMatrix = glm::scale(modelMatrix, scale);
 
     // 4. --- Set Uniforms ---
-    // Get uniform locations (cache these in a Shader class for better performance)
+    // Get standard matrix uniform locations
     GLint modelLoc = glGetUniformLocation(currentShader, "model");
     GLint viewLoc = glGetUniformLocation(currentShader, "view");
     GLint projLoc = glGetUniformLocation(currentShader, "projection");
-    // Use "diffuseTexture" to be consistent with CardPack's pack shader uniform name
-    GLint texSamplerLoc = glGetUniformLocation(currentShader, "cardTexture");
 
-    // Set matrix uniforms (check locations validity)
+    // *** Get Texture Sampler Locations ***
+    GLint baseTexSamplerLoc = glGetUniformLocation(currentShader, "baseTexture"); // Use new name
+    GLint overlayTexSamplerLoc = glGetUniformLocation(currentShader, "overlayTexture"); // Use new name
+
+    // Get other potential uniforms
+    GLint cardTypeLoc = glGetUniformLocation(currentShader, "cardType");
+    GLint cardRarityLoc = glGetUniformLocation(currentShader, "cardRarity");
+    GLint timeLoc = glGetUniformLocation(currentShader, "time"); // For holo shader
+    GLint holoIntensityLoc = glGetUniformLocation(currentShader, "holoIntensity"); // For holo shader
+    GLint overlayIntensityLoc = glGetUniformLocation(currentShader, "overlayIntensity"); // For card shader
+
+    // Set matrix uniforms
     if (modelLoc != -1) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
-    // else std::cerr << "Warning: 'model' uniform not found in shader " << currentShader << std::endl;
-
     if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
-    // else std::cerr << "Warning: 'view' uniform not found in shader " << currentShader << std::endl;
-
     if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-    // else std::cerr << "Warning: 'projection' uniform not found in shader " << currentShader << std::endl;
 
-    // Set texture sampler uniform
-    if (texSamplerLoc != -1) {
-        glActiveTexture(GL_TEXTURE0);         // Activate texture unit 0
-        glBindTexture(GL_TEXTURE_2D, textureID); // Bind the card's specific texture
-        glUniform1i(texSamplerLoc, 0);       // Tell the shader sampler to use texture unit 0
+    // *** Bind Textures to Units and Set Sampler Uniforms ***
+    // Bind Base Texture to Unit 0
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureID); // Bind the base texture ID
+    if (baseTexSamplerLoc != -1) {
+        glUniform1i(baseTexSamplerLoc, 0); // Tell sampler uniform to use texture unit 0
     } else {
-        // std::cerr << "Warning: 'diffuseTexture' uniform not found in shader " << currentShader << std::endl;
-        glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture if uniform is missing
+         // std::cerr << "Warning: 'baseTexture' uniform not found in shader " << currentShader << std::endl;
     }
 
-    // 5. --- Draw the Mesh ---
+    // Bind Overlay Texture to Unit 1 (only if valid)
+    if (overlayTextureID != 0 && overlayTexSamplerLoc != -1) {
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, overlayTextureID); // Bind the overlay texture ID
+        glUniform1i(overlayTexSamplerLoc, 1); // Tell sampler uniform to use texture unit 1
+    } else {
+        // If overlay is missing or uniform doesn't exist, maybe bind a default texture (e.g., transparent pixel) to unit 1? Or ensure shader handles missing texture gracefully.
+        // For now, we just don't bind or set the uniform if ID is 0 or location is -1.
+        // The shader *must* handle the case where overlayTexture might not be properly sampled.
+         if (overlayTexSamplerLoc == -1 && overlayTextureID != 0) {
+             // std::cerr << "Warning: 'overlayTexture' uniform not found in shader " << currentShader << std::endl;
+         }
+    }
+
+    // Set other uniforms based on which shader is active
+    if (currentShader == textureManager->getCardShaderID()) { // Check if it's the normal card shader
+         if (cardTypeLoc != -1) glUniform1i(cardTypeLoc, textureManager->getTypeValue(pokemonType));
+         if (cardRarityLoc != -1) glUniform1i(cardRarityLoc, textureManager->getRarityValue(rarity));
+         if (overlayIntensityLoc != -1) glUniform1f(overlayIntensityLoc, 0.15f); // Set default intensity or make it configurable
+
+    } else if (currentShader == textureManager->getHoloShaderID()) { // Check if it's the holo shader
+         if (cardTypeLoc != -1) glUniform1i(cardTypeLoc, textureManager->getTypeValue(pokemonType));
+         if (cardRarityLoc != -1) glUniform1i(cardRarityLoc, textureManager->getRarityValue(rarity)); // Pass rarity
+         if (timeLoc != -1) {
+             // Ensure glut is initialized if using this!
+             float currentTime = static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f;
+             glUniform1f(timeLoc, currentTime);
+         }
+         if (holoIntensityLoc != -1) {
+             // Set holo intensity based on rarity maybe?
+             float intensity = 0.5f; // Default
+             if (rarity == "holo") intensity = 0.6f;
+             else if (rarity == "reverse") intensity = 0.4f;
+             else if (rarity == "ex") intensity = 0.7f;
+             else if (rarity == "full art") intensity = 0.8f;
+             glUniform1f(holoIntensityLoc, intensity);
+         }
+          // Holo shader might also need viewPos, lightPos etc. if doing lighting
+          GLint viewPosLoc = glGetUniformLocation(currentShader, "viewPos");
+          if (viewPosLoc != -1) {
+              // Need camera position (pass it to Card::render or get from a global state)
+              // Example: Hardcoded for now, replace with actual camera position
+              glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 6.0f);
+              glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
+          }
+    }
+
+    // 5. --- Draw the Mesh --- (Remains the same)
     cardMesh->draw();
 
     // 6. --- Clean up ---
-    // Unbind texture (optional, but good practice if the next object might not set it)
+    // Unbind textures from units (good practice)
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -350,4 +403,9 @@ void Card::setTextureID(GLuint id) {
     //     std::cerr << "Warning: Overwriting existing texture ID for card '" << pokemonName << "'" << std::endl;
     // }
     this->textureID = id;
+}
+
+void Card::setOverlayTextureID(GLuint id)
+{
+	this->overlayTextureID = id;
 }

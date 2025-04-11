@@ -45,6 +45,12 @@
     <ClCompile Include="src\TextureManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\LSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LSystemRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src/gl_core_3_3.h">
@@ -57,18 +63,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src/glstate.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Card.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CardDatabase.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CardPack.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TextureManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Application.hpp">
@@ -92,6 +86,12 @@
     <ClInclude Include="src\TextureManager.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\LSystem.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\LSystemRenderer.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders/f.glsl">
@@ -110,6 +110,18 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="shaders\pack_v.glsl">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\card_f.glsl">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\card_v.glsl">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\holo_f.glsl">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\holo_v.glsl">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

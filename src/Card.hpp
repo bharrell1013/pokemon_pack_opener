@@ -16,6 +16,7 @@ private:
     std::string pokemonType;
     std::string rarity;
     GLuint textureID = 0; // Initialize to 0 (invalid texture)
+    GLuint overlayTextureID = 0; // Overlay texture (L-System)
     std::shared_ptr<Mesh> cardMesh;
     TextureManager* textureManager;
 
@@ -65,13 +66,15 @@ public:
     glm::vec3 getRotation() const { return rotation; }
     glm::vec3 getScale() const { return scale; }
     GLuint getTextureID() const { return textureID; }
+    GLuint getOverlayTextureID() const { return overlayTextureID; };
 
     // Setters
     void setPosition(const glm::vec3& pos);
     void setRotation(const glm::vec3& rot);
     void setScale(const glm::vec3& scl);
     void setVelocity(const glm::vec3& vel);
-    void setTextureID(GLuint id); // *** Make sure this is defined ***
+    void setTextureID(GLuint id);
+    void setOverlayTextureID(GLuint id);
 
 private:
     void initializeMesh();

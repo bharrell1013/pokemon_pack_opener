@@ -5,7 +5,10 @@
 #include <fstream>
 #include <sstream>
 #include <random>    // For random card selection
-#include <vector>    // Needed for image data buffer and shader info log
+#include <vector>    // Needed for image data buffer and shader info 
+#include <sstream>
+#include <iomanip>
+#include <functional>
 
 // --- Dependencies for API ---
 #include <cpr/cpr.h>         // For HTTP requests
@@ -25,9 +28,16 @@ TextureManager::TextureManager() : cardShader(0), holoShader(0), currentShader(0
         std::cerr << "FATAL: One or more shader programs failed to initialize correctly!" << std::endl;
         // Consider throwing an exception or setting an error state
     }
-     std::cout << "[DEBUG] TextureManager Constructor - this: " << this
-              << ", cardShader ID: " << cardShader
-              << ", holoShader ID: " << holoShader << std::endl;
+     if (!std::filesystem::exists(imageCacheDirectory)) {
+         try {
+             std::filesystem::create_directories(imageCacheDirectory);
+             std::cout << "Created image cache directory: " << imageCacheDirectory << std::endl;
+         }
+         catch (const std::filesystem::filesystem_error& e) {
+             std::cerr << "Error creating image cache directory: " << e.what() << std::endl;
+             // Decide how to handle this - maybe disable caching?
+         }
+     }
 }
 
 TextureManager::~TextureManager() {
@@ -181,103 +191,323 @@ std::string TextureManager::mapRarityToApiQuery(const std::string& rarity) {
 
 // --- NEW: Fetches image URL from Pokemon TCG API ---
 std::string TextureManager::fetchCardImageUrl(const Card& card) {
+    // 1. Construct the API query string (searchQuery)
     std::string rarityQueryPart = mapRarityToApiQuery(card.getRarity());
     std::string cardType = card.getPokemonType();
-
     std::string typeQueryPart = "";
-    if (!cardType.empty() && cardType != "Colorless") {
+
+    if (!cardType.empty() && cardType != "Colorless" && cardType != "Normal") { // Adjusted logic slightly for clarity
         typeQueryPart = " types:" + cardType;
-    } else if (cardType == "Normal") {
+    }
+    else if (cardType == "Normal" || cardType == "Colorless") { // Group Normal/Colorless as Colorless type in API
         typeQueryPart = " types:Colorless";
     }
+    // Add handling for other card types (Trainer, Energy) if needed
 
-    // Combine query parts
-    std::string searchQuery = rarityQueryPart + typeQueryPart;
-
-    // Check the URL List Cache
-    if (apiUrlCache.count(searchQuery) && !apiUrlCache[searchQuery].empty()) {
-        // Cache Hit! We have a list of URLs for this query
-        std::list<std::string>& urlList = apiUrlCache[searchQuery];
-
-        // Pick a random URL from the list
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<size_t> distrib(0, urlList.size() - 1);
-        auto it = urlList.begin();
-        std::advance(it, distrib(gen));
-        std::string selectedUrl = *it;
-
-        std::cout << "[API Cache] Hit for query: \"" << searchQuery << "\". Picked URL from cache: " << selectedUrl << std::endl;
-        return selectedUrl;
+    std::string searchQuery = rarityQueryPart;
+    if (!typeQueryPart.empty()) {
+        // Ensure there's a space if both parts exist
+        if (!searchQuery.empty()) {
+            searchQuery += " ";
+        }
+        searchQuery += typeQueryPart;
     }
 
-    std::cout << "[API Cache] Miss for query: \"" << searchQuery << "\". Fetching from API." << std::endl;
-
-    // Request parameters with increased batch size
-    int resultsToFetch = 100;
-    cpr::Url url = cpr::Url{apiBaseUrl};
-    cpr::Parameters params = cpr::Parameters{
-        {"q", searchQuery},
-        {"pageSize", std::to_string(resultsToFetch)},
-        //{"orderBy", "-set.releaseDate"}
-    };
-
-    // Send Request
-    cpr::Response response = cpr::Get(url, params, cpr::Header{{"X-Api-Key", apiKey}});
-
-    // Handle Response
-    if (response.status_code != 200) {
-        std::cerr << "[API] Error fetching card data. Status code: " << response.status_code
-                  << ", URL: " << response.url << ", Error: " << response.error.message << std::endl;
-        
-        // Check specifically for rate limit error
-        if (response.status_code == 429) {
-            std::cerr << "[API] !!! RATE LIMIT HIT (429 Too Many Requests) !!! Consider adding delays or reducing requests." << std::endl;
-            // TODO: Implement backoff/retry mechanism
-            return "";
-        }
-        
-        if (!response.text.empty()) {
-            std::cerr << "[API] Response body (truncated): " << response.text.substr(0, 500) << "..." << std::endl;
-        }
+    // Basic check: if query is empty, can't search
+    if (searchQuery.empty()) {
+        std::cerr << "[API] Cannot generate search query for the card." << std::endl;
         return "";
     }
 
-    // Parse JSON
-    try {
-        json data = json::parse(response.text);
-        if (data.contains("data") && data["data"].is_array() && !data["data"].empty()) {
-            json cardResults = data["data"];
-            std::list<std::string> fetchedUrls;
+    // --- 2. Check/Use the Query Cache ---
+    bool needsApiFetch = true;
+    std::string selectedUrl = "";
 
-            // Populate the list with all valid image URLs from the response
-            for (const auto& resultCard : cardResults) {
-                if (resultCard.contains("images") && resultCard["images"].is_object() &&
-                    resultCard["images"].contains("small")) {
-                    fetchedUrls.push_back(resultCard["images"]["small"].get<std::string>());
+    if (apiQueryCache.count(searchQuery)) {
+        ApiQueryResult& cachedResult = apiQueryCache[searchQuery];
+        if (!cachedResult.urls.empty()) {
+            // We have *some* cached URLs for this query.
+            needsApiFetch = false; // Assume we can use cache initially
+
+            // --- RANDOMNESS LOGIC ---
+            // Decide if we should *force* a fetch of a *new page* for more variety,
+            // or if just picking from the current cached list is okay.
+            // Example: 10% chance to fetch a new random page if possible
+            std::random_device rd_chance;
+            std::mt19937 gen_chance(rd_chance());
+            std::uniform_real_distribution<> distrib_chance(0.0, 1.0);
+
+            bool forceFetchNewPage = (cachedResult.totalCount > cachedResult.pageSize) && // Only if multiple pages exist
+                (cachedResult.pageSize > 0) && // Avoid division by zero later
+                (distrib_chance(gen_chance) < 0.10); // 10% chance
+
+            if (forceFetchNewPage) {
+                std::cout << "[API Cache] Forcing fetch of new page for query: \"" << searchQuery << "\"" << std::endl;
+                needsApiFetch = true; // Trigger API fetch below
+            }
+            else {
+                // Use the existing cached list
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                // Ensure list isn't empty before generating distribution range
+                if (cachedResult.urls.empty()) {
+                    std::cerr << "[API Cache] Cache Hit for query: \"" << searchQuery << "\", but URL list is unexpectedly empty. Forcing fetch." << std::endl;
+                    needsApiFetch = true; // Something's wrong, try fetching again
+                }
+                else {
+                    std::uniform_int_distribution<size_t> distrib(0, cachedResult.urls.size() - 1);
+                    auto it = cachedResult.urls.begin();
+                    std::advance(it, distrib(gen));
+                    selectedUrl = *it;
+                    std::cout << "[API Cache] Hit for query: \"" << searchQuery << "\". Picked URL from existing cache: " << selectedUrl << std::endl;
+                }
+                // Return is handled after the if(needsApiFetch) block now
+            }
+        }
+        else {
+            // Cached entry exists, but URL list is empty (maybe previous fetch failed?)
+            std::cout << "[API Cache] Hit for query: \"" << searchQuery << "\", but cached URL list is empty. Needs API fetch." << std::endl;
+            // needsApiFetch remains true
+        }
+    }
+    else {
+        std::cout << "[API Cache] Miss for query: \"" << searchQuery << "\". Needs API fetch." << std::endl;
+        // needsApiFetch is already true
+    }
+
+    // --- 3. API Fetch (If Needed) ---
+    if (needsApiFetch) {
+        std::cout << "[API] Preparing API fetch for query: \"" << searchQuery << "\"" << std::endl;
+
+        int pageToFetch = 1; // Default to page 1 for first fetch or if no pagination info
+        int resultsToFetch = 100; // Keep fetching a decent batch size
+        using json = nlohmann::json; // Alias for convenience
+
+        // If we decided to force fetch a new page, calculate which one
+        // Also calculate if it's not the first fetch for this query
+        if (apiQueryCache.count(searchQuery)) { // Check if cache entry exists (even if empty)
+            ApiQueryResult& cachedMeta = apiQueryCache[searchQuery];
+            // Check if pagination is possible based on previous fetch metadata
+            if (cachedMeta.totalCount > cachedMeta.pageSize && cachedMeta.pageSize > 0) {
+                int maxPages = (cachedMeta.totalCount + cachedMeta.pageSize - 1) / cachedMeta.pageSize; // Ceiling division
+                if (maxPages > 1) {
+                    std::random_device rd_page;
+                    std::mt19937 gen_page(rd_page());
+                    std::uniform_int_distribution<int> distrib_page(1, maxPages);
+                    pageToFetch = distrib_page(gen_page);
+                    // Optional: Avoid fetching the *same* page we already have cached, if desired
+                    // while (pageToFetch == cachedMeta.fetchedPage && maxPages > 1) {
+                    //     pageToFetch = distrib_page(gen_page);
+                    // }
+                    std::cout << "[API] Decided to fetch random page " << pageToFetch << " of " << maxPages << std::endl;
+                }
+                else {
+                    std::cout << "[API] Pagination possible but calculated maxPages is 1. Fetching page 1." << std::endl;
+                    pageToFetch = 1; // Reset to 1 if calculation ends up weird
                 }
             }
-
-            if (!fetchedUrls.empty()) {
-                // Store the whole list in the cache
-                apiUrlCache[searchQuery] = fetchedUrls;
-                std::cout << "[API Cache] Stored " << fetchedUrls.size() << " URLs for query: \"" << searchQuery << "\"" << std::endl;
-
-                // Pick one from the newly fetched list
-                std::string selectedUrl = fetchedUrls.front();
-                std::cout << "[API] Fresh fetch successful. Using URL: " << selectedUrl << std::endl;
-                return selectedUrl;
+            else {
+                std::cout << "[API] Cache exists but not enough results for pagination ("
+                    << cachedMeta.totalCount << " total, " << cachedMeta.pageSize << " page size). Fetching page 1." << std::endl;
+                pageToFetch = 1; // Fetch page 1 if no pagination possible
             }
         }
+        else {
+            std::cout << "[API] First fetch for this query. Fetching page 1." << std::endl;
+            pageToFetch = 1; // First time fetch, get page 1
+        }
 
-        std::cout << "[API] Query returned no valid results for: \"" << searchQuery << "\"" << std::endl;
-        return "";
+
+        // Build parameters, including the page number
+        cpr::Parameters params = cpr::Parameters{
+            {"q", searchQuery},
+            {"pageSize", std::to_string(resultsToFetch)},
+            {"page", std::to_string(pageToFetch)}
+            // No orderBy needed unless specifically desired
+        };
+
+        // Make API call
+        std::cout << "[API] Sending request to: " << apiBaseUrl << " with params: q=" << searchQuery
+            << ", pageSize=" << resultsToFetch << ", page=" << pageToFetch << std::endl;
+        cpr::Response response = cpr::Get(cpr::Url{ apiBaseUrl }, params, cpr::Header{ {"X-Api-Key", apiKey} });
+
+        // Handle Response & Errors
+        if (response.status_code != 200) {
+            std::cerr << "[API] Error fetching card data. Status code: " << response.status_code
+                << ", URL: " << response.url << ", Error: " << response.error.message << std::endl;
+
+            if (response.status_code == 429) {
+                std::cerr << "[API] !!! RATE LIMIT HIT (429 Too Many Requests) !!! Consider adding delays or reducing requests." << std::endl;
+                // TODO: Implement exponential backoff/retry mechanism here if needed
+            }
+            else if (response.status_code == 400) {
+                std::cerr << "[API] Bad Request (400). Check query syntax: q=" << searchQuery << std::endl;
+            }
+            else if (response.status_code == 404) {
+                std::cerr << "[API] Not Found (404). Possibly invalid endpoint or query parameters?" << std::endl;
+            }
+            // Log response body for debugging if available
+            if (!response.text.empty()) {
+                std::cerr << "[API] Response body (truncated): " << response.text.substr(0, 500) << (response.text.length() > 500 ? "..." : "") << std::endl;
+            }
+
+            // If cache already exists, don't wipe it on error, just return empty for this attempt
+            // If cache didn't exist, maybe cache an empty result to prevent immediate retries?
+            if (!apiQueryCache.count(searchQuery)) {
+                std::cout << "[API Cache] Caching empty result for query \"" << searchQuery << "\" after API error." << std::endl;
+                apiQueryCache[searchQuery] = {}; // Cache empty result placeholder
+            }
+            return ""; // Return empty string on error
+        }
+
+        // Parse JSON
+        try {
+            json data = json::parse(response.text);
+            // Extract metadata (important for pagination)
+            int totalCount = 0;
+            int pageSizeFromApi = 0; // Use the requested size as fallback
+
+            if (data.contains("totalCount") && data["totalCount"].is_number()) {
+                totalCount = data["totalCount"].get<int>();
+            }
+            else {
+                std::cout << "[API] Warning: 'totalCount' not found in response. Pagination may be unreliable." << std::endl;
+                // Attempt fallback if data array exists
+                if (data.contains("data") && data["data"].is_array()) {
+                    totalCount = data["data"].size(); // This is only the count for *this page*
+                }
+            }
+            if (data.contains("pageSize") && data["pageSize"].is_number()) {
+                pageSizeFromApi = data["pageSize"].get<int>();
+            }
+            else {
+                pageSizeFromApi = resultsToFetch; // Use the requested size if not in response
+                std::cout << "[API] Warning: 'pageSize' not found in response. Using requested size: " << resultsToFetch << std::endl;
+            }
+
+
+            if (data.contains("data") && data["data"].is_array() && !data["data"].empty()) {
+                json cardResults = data["data"];
+                ApiQueryResult newResult;
+                newResult.pageSize = pageSizeFromApi;
+                newResult.totalCount = totalCount;
+                newResult.fetchedPage = pageToFetch;
+                // newResult.fetchedTime = std::chrono::steady_clock::now(); // If using TTL
+
+                // Populate URL list
+                for (const auto& resultCard : cardResults) {
+                    if (resultCard.contains("images") && resultCard["images"].is_object()) {
+                        if (resultCard["images"].contains("small") && resultCard["images"]["small"].is_string()) {
+                            newResult.urls.push_back(resultCard["images"]["small"].get<std::string>());
+                        }
+                        else if (resultCard["images"].contains("large") && resultCard["images"]["large"].is_string()) {
+                            // Fallback to large if small isn't there (or isn't a string)
+                            newResult.urls.push_back(resultCard["images"]["large"].get<std::string>());
+                            std::cout << "[API] Note: Using 'large' image URL as 'small' was unavailable for a card." << std::endl;
+                        }
+                        // else: No suitable image found for this card entry
+                    }
+                }
+
+                if (!newResult.urls.empty()) {
+                    // --- Cache Update Strategy ---
+                    // Option A: Replace cache entirely with this new page's results (Simpler)
+                    apiQueryCache[searchQuery] = newResult;
+
+                    // Option B: Merge/Append (More complex, keeps larger pool but needs careful management)
+                    /*
+                    if (apiQueryCache.count(searchQuery)) {
+                        // Merge lists (ensure no duplicates if needed)
+                        apiQueryCache[searchQuery].urls.splice(apiQueryCache[searchQuery].urls.end(), newResult.urls);
+                        apiQueryCache[searchQuery].urls.unique(); // Remove duplicates if splice adds them
+                        // Update metadata - careful here, totalCount/pageSize should reflect overall query
+                        apiQueryCache[searchQuery].totalCount = newResult.totalCount; // Assume latest fetch has correct total
+                        apiQueryCache[searchQuery].pageSize = newResult.pageSize;
+                        // Maybe track multiple fetched pages? More complex state.
+                    } else {
+                        apiQueryCache[searchQuery] = newResult;
+                    }
+                    */
+
+                    std::cout << "[API Cache] Stored/Updated " << newResult.urls.size() << " URLs (Page " << pageToFetch
+                        << ", Total: " << newResult.totalCount << ") for query: \"" << searchQuery << "\"" << std::endl;
+
+                    // Pick URL from the *newly fetched* list
+                    std::random_device rd_new;
+                    std::mt19937 gen_new(rd_new());
+                    // Check size again before distribution
+                    if (newResult.urls.empty()) {
+                        std::cerr << "[API] Logic Error: newResult.urls became empty after population." << std::endl;
+                        selectedUrl = ""; // Should not happen if population worked
+                    }
+                    else {
+                        std::uniform_int_distribution<size_t> distrib_new(0, newResult.urls.size() - 1);
+                        auto it_new = newResult.urls.begin();
+                        std::advance(it_new, distrib_new(gen_new));
+                        selectedUrl = *it_new;
+
+                        std::cout << "[API] Fresh fetch successful (Page " << pageToFetch << "). Using URL: " << selectedUrl << std::endl;
+                    }
+                    // Return is handled after the if(needsApiFetch) block now
+
+                }
+                else {
+                    std::cerr << "[API] Fetch OK but no valid image URLs found in 'data' array on page " << pageToFetch << "." << std::endl;
+                    // Cache an empty result to avoid refetching this specific page immediately
+                    // Only cache if it's a *new* query or if we want to overwrite existing cache with empty
+                    // Option: Only cache empty if it was a cache miss initially
+                    if (!apiQueryCache.count(searchQuery)) {
+                        std::cout << "[API Cache] Caching empty result for query \"" << searchQuery << "\" after finding no URLs." << std::endl;
+                        apiQueryCache[searchQuery] = {}; // Cache empty result placeholder
+                        apiQueryCache[searchQuery].totalCount = totalCount; // Still store metadata if known
+                        apiQueryCache[searchQuery].pageSize = pageSizeFromApi;
+                        apiQueryCache[searchQuery].fetchedPage = pageToFetch;
+                    }
+                    else {
+                        // If cache already existed, maybe don't overwrite with empty? Or mark page as tried?
+                        // Current behavior: Existing cache remains, selectedUrl is empty.
+                        std::cout << "[API Cache] Not overwriting existing cache for query \"" << searchQuery << "\" despite empty fetch result." << std::endl;
+                    }
+                    selectedUrl = ""; // Ensure selectedUrl is empty
+                    // Return is handled after the if(needsApiFetch) block now
+                }
+            }
+            else {
+                // 'data' array not found or empty in a 200 OK response
+                std::cout << "[API] 'data' array not found or empty on page " << pageToFetch << " for query: \"" << searchQuery << "\". Total results reported: " << totalCount << std::endl;
+                // Cache an empty result similar to above
+                if (!apiQueryCache.count(searchQuery)) {
+                    std::cout << "[API Cache] Caching empty result for query \"" << searchQuery << "\" due to empty 'data' array." << std::endl;
+                    apiQueryCache[searchQuery] = {}; // Cache empty result placeholder
+                    apiQueryCache[searchQuery].totalCount = totalCount; // Store metadata
+                    apiQueryCache[searchQuery].pageSize = pageSizeFromApi;
+                    apiQueryCache[searchQuery].fetchedPage = pageToFetch;
+                }
+                else {
+                    std::cout << "[API Cache] Not overwriting existing cache for query \"" << searchQuery << "\" despite empty 'data' array." << std::endl;
+                }
+                selectedUrl = ""; // Ensure selectedUrl is empty
+                // Return is handled after the if(needsApiFetch) block now
+            }
+        }
+        catch (json::exception& e) {
+            std::cerr << "[API] JSON Exception after successful fetch: " << e.what() << std::endl;
+            std::cerr << "[API] Response Text (truncated): " << response.text.substr(0, 500) << (response.text.length() > 500 ? "..." : "") << std::endl;
+            // Cache empty result similar to API errors
+            if (!apiQueryCache.count(searchQuery)) {
+                std::cout << "[API Cache] Caching empty result for query \"" << searchQuery << "\" after JSON parsing error." << std::endl;
+                apiQueryCache[searchQuery] = {}; // Cache empty result placeholder
+            }
+            selectedUrl = "";
+            // Return is handled after the if(needsApiFetch) block now
+        }
+    } // End of if(needsApiFetch)
+
+    // --- 4. Return the selected URL (either from cache or fresh fetch) ---
+    if (selectedUrl.empty()) {
+        std::cerr << "[API Result] No valid URL could be obtained or selected for card query: \"" << searchQuery << "\"" << std::endl;
     }
-    catch (json::exception& e) {
-        std::cerr << "[API] JSON Exception: " << e.what() << std::endl;
-        std::cerr << "[API] Response Text (truncated): " << response.text.substr(0, 500) << "..." << std::endl;
-        return "";
-    }
+    return selectedUrl;
 }
 
 // --- NEW: Downloads image data from a URL ---
@@ -382,40 +612,90 @@ GLuint TextureManager::loadTextureFromMemory(const std::vector<unsigned char>& i
     return textureID;
 }
 
-// --- Modified: generateCardTexture ---
+// In TextureManager.cpp
 GLuint TextureManager::generateCardTexture(const Card& card) {
     GLuint textureID = 0;
 
-    // --- 1. Attempt API Fetch ---
+    // --- 1. Get Image URL (Uses apiUrlCache internally) ---
     std::string imageUrl = fetchCardImageUrl(card);
 
-    if (!imageUrl.empty()) {
+    if (imageUrl.empty()) {
+        std::cerr << "[Generate Tex] Failed to get image URL for " << card.getPokemonName() << "." << std::endl;
+        // Go directly to fallbacks if URL fetch fails
+    }
+    else {
+        // --- 2. Check In-Memory Texture Cache (textureMap) ---
+        textureID = getTexture(imageUrl); // Checks if texture is already loaded ON GPU
+        if (textureID != 0) {
+            // std::cout << "[Generate Tex] Cache hit (In-Memory GPU Texture): " << imageUrl << std::endl;
+            return textureID; // Already loaded in this session, done.
+        }
+
+        // --- 3. Check Persistent Disk Cache ---
+        std::string localPath = getCacheFilename(imageUrl);
+        if (std::filesystem::exists(localPath)) {
+            // std::cout << "[Generate Tex] Cache hit (Disk): " << localPath << std::endl;
+            // Load texture directly from the local file
+            // Use loadTexture, which handles file loading AND adds to textureMap
+            textureID = loadTexture(localPath);
+            if (textureID != 0) {
+                // Important: Need to map the ORIGINAL URL to this ID too in textureMap
+                // so future calls using the URL hit the memory cache directly.
+                textureMap[imageUrl] = textureID;
+                return textureID;
+            }
+            else {
+                std::cerr << "[Generate Tex] Error loading texture from disk cache file: " << localPath << std::endl;
+                // Proceed to download as if cache file was bad/corrupt
+            }
+        }
+
+        // --- 4. Download, Save to Disk, and Load ---
+        // std::cout << "[Generate Tex] Cache miss (Disk). Attempting download: " << imageUrl << std::endl;
         std::vector<unsigned char> imageData = downloadImageData(imageUrl);
         if (!imageData.empty()) {
+            // --- SAVE TO DISK ---
+            std::ofstream outFile(localPath, std::ios::binary);
+            if (outFile) {
+                outFile.write(reinterpret_cast<const char*>(imageData.data()), imageData.size());
+                outFile.close();
+                // std::cout << "[Generate Tex] Saved downloaded image to disk cache: " << localPath << std::endl;
+            }
+            else {
+                std::cerr << "[Generate Tex] Error opening file for writing disk cache: " << localPath << std::endl;
+            }
+            // --- LOAD FROM MEMORY ---
+            // This call will also add it to textureMap using imageUrl as key
             textureID = loadTextureFromMemory(imageData, imageUrl);
+            if (textureID != 0) {
+                return textureID; // Success
+            }
+            else {
+                std::cerr << "[Generate Tex] Failed to load texture from memory after download." << std::endl;
+            }
         }
-    }
+        else {
+            std::cerr << "[Generate Tex] Failed to download image data for URL: " << imageUrl << std::endl;
+        }
+    } // End of else block (imageUrl was not empty)
 
-    // --- 2. Fallback to Local Template if API failed ---
+
+    // --- 5. Fallbacks (Only if everything above failed) ---
     if (textureID == 0) {
         std::string templatePath = "textures/cards/card_template.png";
-        std::cout << "[Fallback] API fetch failed or yielded no image for " << card.getPokemonName()
-                  << ". Falling back to template: " << templatePath << std::endl;
-        textureID = loadTexture(templatePath);
+        std::cout << "[Fallback] API/Download/Cache failed for " << card.getPokemonName()
+            << ". Falling back to template: " << templatePath << std::endl;
+        textureID = loadTexture(templatePath); // Use regular loadTexture for file
     }
-
-    // --- 3. Fallback to Placeholder if Template ALSO failed ---
     if (textureID == 0) {
         std::string placeholderPath = "textures/pokemon/placeholder.png";
         std::cerr << "[Fallback] Failed to load template texture. Falling back to placeholder: "
-                  << placeholderPath << std::endl;
+            << placeholderPath << std::endl;
         textureID = loadTexture(placeholderPath);
     }
-
-    // --- 4. Final Error Check ---
     if (textureID == 0) {
-        std::cerr << "FATAL: generateCardTexture failed to load ANY texture (API, template, placeholder) for "
-                  << card.getPokemonName() << std::endl;
+        std::cerr << "FATAL: generateCardTexture failed to load ANY texture (API, caches, fallbacks) for "
+            << card.getPokemonName() << std::endl;
     }
 
     return textureID;
@@ -742,4 +1022,14 @@ int TextureManager::getRarityValue(const std::string& rarity) {
     if (rarity == "full art") return 4;
     std::cerr << "Warning: Unknown rarity '" << rarity << "' encountered in getRarityValue. Defaulting to 0 (normal)." << std::endl;
     return 0; // Default to normal rarity
+}
+
+std::string TextureManager::getCacheFilename(const std::string& url) const {
+    // Use a hash of the URL for a unique, fixed-length filename.
+    // Alternatively, sanitize the URL string (replace special chars), but hashing is safer.
+    std::size_t urlHash = std::hash<std::string>{}(url);
+    std::stringstream ss;
+    // Use hex representation of the hash. Add a common extension.
+    ss << imageCacheDirectory << std::hex << urlHash << ".png_cache";
+    return ss.str();
 }

@@ -10,11 +10,22 @@
 // Forward declaration
 class Card;
 
+struct ApiQueryResult {
+    std::list<std::string> urls;
+    int totalCount = 0;
+    int pageSize = 0; // Store the page size used to get this list
+    int fetchedPage = 0; // Which page did these URLs come from?
+    // Add more fields if needed
+};
+
 class TextureManager {
 private:
     // --- Texture Management ---
     std::map<std::string, GLuint> textureMap;  // Cache for loaded textures
-    std::map<std::string, std::list<std::string>> apiUrlCache; // Cache for API query results
+    //std::map<std::string, std::list<std::string>> apiUrlCache; // Cache for API query results
+    std::map<std::string, ApiQueryResult> apiQueryCache;
+
+    const std::string imageCacheDirectory = "image_cache/";
 
     // --- Shader Programs ---
     GLuint cardShader = 0;        // Standard card shader program
@@ -39,6 +50,8 @@ private:
     GLuint loadTextureFromMemory(const std::vector<unsigned char>& imageData, const std::string& cacheKey);
     std::string fetchCardImageUrl(const Card& card);  // Gets image URL from Pokemon TCG API
     std::string mapRarityToApiQuery(const std::string& rarity);  // Converts rarity to API query
+
+    std::string getCacheFilename(const std::string& url) const;
 
 public:
     TextureManager();

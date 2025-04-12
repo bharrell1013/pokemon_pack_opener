@@ -184,6 +184,7 @@ xcopy "$(ProjectDir)textures" "$(OutDir)textures\" /Y /I /S /E</Command>
     <ClCompile Include="src\Card.cpp" />
     <ClCompile Include="src\CardDatabase.cpp" />
     <ClCompile Include="src\CardPack.cpp" />
+    <ClCompile Include="src\InputHandler.cpp" />
     <ClCompile Include="src\LSystem.cpp" />
     <ClCompile Include="src\LSystemRenderer.cpp" />
     <ClCompile Include="src\TextureManager.cpp" />

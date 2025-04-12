@@ -4,7 +4,7 @@
 #include "Application.hpp"
 
 // Global application instance
-std::unique_ptr<Application> application;
+//std::unique_ptr<Application> application;
 
 int main(int argc, char** argv) {
     try {

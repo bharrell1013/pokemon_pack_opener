@@ -6,6 +6,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <GL/freeglut.h>
 
+std::unique_ptr<Application> application;
+
 Application::Application() :
     lastFrameTime(0),
     currentTime(0),
@@ -245,4 +247,42 @@ void Application::motionCallback(int x, int y) {
 void Application::idleCallback() {
     application->update();
     glutPostRedisplay();
+}
+
+void Application::resetPack() {
+    if (!cardPack || !cardDatabase || !textureManager) {
+        std::cerr << "Error: Cannot reset pack. Core components missing." << std::endl;
+        return;
+    }
+
+    std::cout << "Resetting pack..." << std::endl;
+
+    // Change window title during generation
+    const char* originalTitle = "Pokémon Pack Simulator"; // Store original title again
+    glutSetWindowTitle("Generating New Card Pack...");
+
+    // Clear any API/Texture cache *if desired* for a completely fresh pull.
+    // Optional - uncomment if you want 'N' to force re-downloading everything.
+    // Be mindful of API rate limits if you do this frequently.
+    // textureManager->clearApiCache(); // Needs implementation in TextureManager
+    // textureManager->clearTextureCache(); // Needs implementation in TextureManager
+
+    try {
+        // Regenerate the cards. This should also reset the CardPack state to CLOSED.
+        cardPack->generateCards(*cardDatabase);
+        std::cout << "New card pack generated successfully." << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error during pack regeneration: " << e.what() << std::endl;
+        // Handle error state if needed (e.g., show an error message)
+    }
+
+    // Reset window title
+    glutSetWindowTitle(originalTitle);
+
+    // Optional: Reset InputHandler state if necessary (e.g., mouse drag)
+    if (inputHandler) {
+        // inputHandler->resetMouseState(); // You would need to add this method if needed
+    }
+    // No explicit state change needed for CardPack here, generateCards sets it to CLOSED.
 }

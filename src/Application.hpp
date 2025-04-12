@@ -9,6 +9,11 @@
 #include "InputHandler.hpp"
 #include "util.hpp" 
 
+class CardPack;
+class CardDatabase;
+class TextureManager;
+class InputHandler;
+
 class Application {
 private:
     // Core components
@@ -39,6 +44,7 @@ public:
     void update();
     void render();
     void cleanup();
+    void resetPack();
 
     // GLUT callback wrappers
     static void displayCallback();

@@ -34,6 +34,8 @@ private:
     GLuint holoShader = 0;        // Holographic effect shader program
     GLuint currentShader = 0;     // Currently active shader program
 
+    int shaderRenderMode = 0; // 0: Normal, 1: Overlay Only, 2: Base Only
+
     // --- API Configuration ---
     const std::string apiKey = "56f39a72-5758-495c-ac18-134248507b5a";
     const std::string apiBaseUrl = "https://api.pokemontcg.io/v2/cards";
@@ -80,6 +82,9 @@ public:
     void applyCardShader(const Card& card);
     // Apply holographic effect shader with time parameter
     void applyHoloShader(const Card& card, float time);
+
+    void cycleShaderMode();
+    int getShaderRenderMode() const;
 
     // --- Shader State Getters ---
     GLuint getCurrentShader() const { return currentShader; }

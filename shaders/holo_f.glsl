@@ -13,6 +13,8 @@ uniform float holoIntensity; // Overall intensity for holo effects
 uniform int cardType;
 uniform int cardRarity; // NEW: Pass rarity to potentially adjust effects
 
+uniform int renderMode = 0; 
+
 // Keep type colors if used for effects
 const vec3 holoColors[12] = vec3[](
     vec3(0.8, 0.8, 0.8),   // Normal (Index 0)
@@ -111,6 +113,14 @@ void main()
     }
 
     // Final color clamp and alpha
-    FragColor = vec4(clamp(finalColor, 0.0, 1.0), baseColor.a);
+    //FragColor = vec4(clamp(finalColor, 0.0, 1.0), baseColor.a);
     //FragColor = texture(overlayTexture, TexCoord);
+
+    if (renderMode == 1) { // Overlay Only
+        FragColor = vec4(overlay.rgb, overlay.a); // Use overlay color and alpha
+    } else if (renderMode == 2) { // Base Only
+        FragColor = baseColor; // Use base color and alpha directly
+    } else { // Normal Holo (Mode 0 or default)
+        FragColor = vec4(clamp(finalColor, 0.0, 1.0), baseColor.a); // Output calculated holo result
+    }
 }

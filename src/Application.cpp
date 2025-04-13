@@ -261,6 +261,9 @@ void Application::resetPack() {
     const char* originalTitle = "Pokémon Pack Simulator"; // Store original title again
     glutSetWindowTitle("Generating New Card Pack...");
 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glutSwapBuffers();
+
     // Clear any API/Texture cache *if desired* for a completely fresh pull.
     // Optional - uncomment if you want 'N' to force re-downloading everything.
     // Be mindful of API rate limits if you do this frequently.

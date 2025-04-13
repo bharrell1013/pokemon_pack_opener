@@ -39,7 +39,24 @@ void InputHandler::handleKeyPress(unsigned char key, int x, int y) {
             std::cerr << "Error: Global application instance not available." << std::endl;
         }
         break;
+    case 't': // Lowercase t
+    case 'T': // Uppercase T
+        std::cout << "'T' key pressed. Toggling shader mode." << std::endl;
+        if (application) {
+            TextureManager* tm = application->getApplicationTextureManager();
+            if (tm) {
+                tm->cycleShaderMode();
+            }
+            else {
+                std::cerr << "Error: TextureManager instance not available via Application." << std::endl;
+            }
+        }
+        else {
+            std::cerr << "Error: Global application instance not available in InputHandler." << std::endl;
+        }
+        break;
     }
+
 }
 
 void InputHandler::handleMouseClick(int button, int state, int x, int y) {

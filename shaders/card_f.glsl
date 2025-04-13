@@ -4,12 +4,14 @@ out vec4 FragColor;
 in vec2 TexCoord;
 
 uniform sampler2D baseTexture;    // Renamed from cardTexture for clarity
-uniform sampler2D overlayTexture; // NEW: L-System Overlay
+uniform sampler2D overlayTexture; // L-System Overlay
 uniform int cardType;             // Keep for potential future use, but tinting might be less needed now
 uniform int cardRarity;           // Keep for potential future use
 
 // Optional: Define how much the overlay affects the base
 uniform float overlayIntensity = 0.6; // Adjust for subtle effect
+
+uniform int renderMode = 0; // Shader render mode (0=Normal, 1=Overlay, 2=Base)
 
 // Optional: Type colors if you still want some tinting
 const vec3 typeColors[12] = vec3[12](
@@ -64,6 +66,15 @@ void main()
     // finalColor *= brightness;
 
     // Ensure final alpha uses base texture's alpha (or 1.0 if base is opaque)
-    FragColor = vec4(clamp(blendedColor, 0.0, 1.0), baseColor.a);
+    //FragColor = vec4(clamp(blendedColor, 0.0, 1.0), baseColor.a);
     //FragColor = texture(overlayTexture, TexCoord);
+
+    // --- Select Output Based on Mode ---
+    if (renderMode == 1) { // Overlay Only
+        FragColor = vec4(overlayColor.rgb, overlayColor.a); // Use overlay color and alpha
+    } else if (renderMode == 2) { // Base Only
+        FragColor = baseColor; // Use base color and alpha directly
+    } else { // Normal Blended (Mode 0 or default)
+        FragColor = vec4(clamp(blendedColor, 0.0, 1.0), baseColor.a); // Output blended result
+    }
 }

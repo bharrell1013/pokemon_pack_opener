@@ -772,6 +772,19 @@ void TextureManager::applyCardShader(const Card& card) {
         glUniform1i(rarityLoc, rarityValue);
     }
 
+    GLint modeLoc = glGetUniformLocation(cardShader, "renderMode");
+    if (modeLoc != -1) {
+        glUniform1i(modeLoc, shaderRenderMode); // Pass the current mode
+    }
+    else {
+        // Warn only once maybe to avoid spamming console
+        static bool warned = false;
+        if (!warned) {
+            std::cerr << "Warning: Uniform 'renderMode' not found in card shader (ID: " << cardShader << ")" << std::endl;
+            warned = true;
+        }
+    }
+
     // Check for GL errors after setting uniforms
     err = glGetError();
     if (err != GL_NO_ERROR) {
@@ -828,6 +841,18 @@ void TextureManager::applyHoloShader(const Card& card, float time) {
     }
     if (typeLoc != -1) {
         glUniform1i(typeLoc, getTypeValue(card.getPokemonType()));
+    }
+
+    GLint modeLoc = glGetUniformLocation(holoShader, "renderMode");
+    if (modeLoc != -1) {
+        glUniform1i(modeLoc, shaderRenderMode); // Pass the current mode
+    }
+    else {
+        static bool warned = false;
+        if (!warned) {
+            std::cerr << "Warning: Uniform 'renderMode' not found in holo shader (ID: " << holoShader << ")" << std::endl;
+            warned = true;
+        }
     }
 
     // Check for GL errors after setting uniforms
@@ -1210,4 +1235,19 @@ GLuint TextureManager::generateProceduralOverlayTexture(const Card& card) {
     std::cout << "[Overlay Gen] Generated and cached texture ID " << overlayTextureID << " for: " << cacheKey << std::endl;
 
     return overlayTextureID;
+}
+
+void TextureManager::cycleShaderMode() {
+    shaderRenderMode = (shaderRenderMode + 1) % 3; // Cycle through 0, 1, 2
+    std::cout << "Shader Render Mode set to: ";
+    switch (shaderRenderMode) {
+    case 0: std::cout << "Normal (Base + Overlay)" << std::endl; break;
+    case 1: std::cout << "Overlay Only" << std::endl; break;
+    case 2: std::cout << "Base Only" << std::endl; break;
+    default: std::cout << "Unknown" << std::endl; break; // Should not happen
+    }
+}
+
+int TextureManager::getShaderRenderMode() const {
+    return shaderRenderMode;
 }

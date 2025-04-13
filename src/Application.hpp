@@ -45,6 +45,7 @@ public:
     void render();
     void cleanup();
     void resetPack();
+    TextureManager* getApplicationTextureManager() { return textureManager.get(); }
 
     // GLUT callback wrappers
     static void displayCallback();

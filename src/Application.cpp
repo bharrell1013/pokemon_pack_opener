@@ -5,6 +5,7 @@
 #include <iostream>
 #include <glm/gtc/type_ptr.hpp>
 #include <GL/freeglut.h>
+#include <cmath>
 
 std::unique_ptr<Application> application;
 
@@ -12,7 +13,11 @@ Application::Application() :
     lastFrameTime(0),
     currentTime(0),
     deltaTime(0),
-    isRunning(true)
+    isRunning(true),
+    cameraTarget(0.0f, 0.0f, 0.0f),
+    cameraRadius(6.0f),
+    cameraAzimuth(0.0f), // Start looking along -Z
+    cameraElevation(0.0f)
 {
     // Initialize components
     /*cardDatabase = std::make_unique<CardDatabase>();*/
@@ -33,6 +38,8 @@ void Application::initialize(int argc, char** argv) {
 
     // Initialize GLUT
     glutInit(&argc, argv);
+    glutInitContextVersion(3, 3);
+    glutInitContextProfile(GLUT_CORE_PROFILE);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowSize(800, 600);
 
@@ -40,6 +47,13 @@ void Application::initialize(int argc, char** argv) {
     const char* originalTitle = "Pokémon Pack Simulator"; // Store original title
     glutCreateWindow(originalTitle);
     std::cout << "glutCreateWindow DONE (OpenGL context should exist now)" << std::endl;
+
+    //GLenum err = glGetError(); // Harmless call to potentially trigger loading
+    //if (err != GL_NO_ERROR) {
+    //    std::cerr << "OpenGL error after window creation check: " << err << std::endl;
+    //}
+    //std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
+    //std::cout << "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
     
     try {
         std::vector<GLuint> shaders;
@@ -108,9 +122,11 @@ void Application::initialize(int argc, char** argv) {
     glutMouseFunc(mouseCallback);
     glutMotionFunc(motionCallback);
     glutIdleFunc(idleCallback);
-
+    glutMouseWheelFunc(mouseWheelCallback);
     // Initialize OpenGL states
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE); // Optional: Cull back faces
+    glCullFace(GL_BACK);
     glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
     // Generate a card pack (Now cardPack and cardDatabase exist)
@@ -153,20 +169,27 @@ void Application::render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     // --- End Loading Screen Check ---
 
-    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 6.0f); // Keep camera position consistent
+    //glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 6.0f); // Keep camera position consistent
+
+    // --- Calculate Camera Position from Orbit Parameters ---
+    glm::vec3 cameraPos;
+    cameraPos.x = cameraTarget.x + cameraRadius * cos(cameraElevation) * sin(cameraAzimuth);
+    cameraPos.y = cameraTarget.y + cameraRadius * sin(cameraElevation);
+    cameraPos.z = cameraTarget.z + cameraRadius * cos(cameraElevation) * cos(cameraAzimuth);
+    // --- End Camera Calculation ---
 
     // Create view-projection matrix
     glm::mat4 projection = glm::perspective(
-        glm::radians(60.0f),
+        glm::radians(cameraFov),
         (float)glutGet(GLUT_WINDOW_WIDTH) / (float)glutGet(GLUT_WINDOW_HEIGHT),
-        0.1f,
-        100.0f
+        cameraNearPlane,
+        cameraFarPlane
     );
 
     glm::mat4 view = glm::lookAt(
-        cameraPos,
-        glm::vec3(0.0f, 0.0f, 0.0f),  // Look at origin
-        glm::vec3(0.0f, 1.0f, 0.0f)   // Up vector
+        cameraPos,          // Calculated orbit position
+        cameraTarget,       // Still look at the origin (or card stack center)
+        glm::vec3(0.0f, 1.0f, 0.0f) // Standard up vector
     );
 
     // Don't combine here yet, pass separately or combine in CardPack/Card as needed
@@ -174,15 +197,15 @@ void Application::render() {
 
     // *** RENDER PACK ***
     // Activate the PACK shader
-    glUseProgram(shaderProgramID); // Use the application's shader (ID 3) for the pack
+    //glUseProgram(shaderProgramID); // Use the application's shader (ID 3) for the pack
 
-    // Set PACK shader view and projection uniforms (these are needed by the shader)
-    GLint viewLoc = glGetUniformLocation(shaderProgramID, "view");
-    GLint projLoc = glGetUniformLocation(shaderProgramID, "projection");
-    GLint viewPosLoc = glGetUniformLocation(shaderProgramID, "viewPos");
-    if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-    if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-    if (viewPosLoc != -1) glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
+    //// Set PACK shader view and projection uniforms (these are needed by the shader)
+    //GLint viewLoc = glGetUniformLocation(shaderProgramID, "view");
+    //GLint projLoc = glGetUniformLocation(shaderProgramID, "projection");
+    //GLint viewPosLoc = glGetUniformLocation(shaderProgramID, "viewPos");
+    //if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    //if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    //if (viewPosLoc != -1) glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
     // else std::cerr << "Warning: Uniform 'viewPos' not found in shader." << std::endl; // Less critical maybe
 
 
@@ -200,8 +223,53 @@ void Application::render() {
 
     // Render components that use the PACK shader
     if (cardPack) {
-        // Pass PACK shader ID, view/projection matrices, AND packTextureID
-        cardPack->render(shaderProgramID, view, projection, packTextureID, cameraPos);
+        PackState currentState = cardPack->getState();
+
+        if (currentState == CLOSED) {
+            // --- RENDER PACK MODEL using pack shader (ID: shaderProgramID) ---
+            glUseProgram(shaderProgramID); // Activate the pack's lighting shader
+
+            // Set common matrix uniforms (view, projection)
+            GLint viewLoc = glGetUniformLocation(shaderProgramID, "view");
+            GLint projLoc = glGetUniformLocation(shaderProgramID, "projection");
+            if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+            if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+            // Set lighting uniforms for the pack shader
+            GLint viewPosLoc = glGetUniformLocation(shaderProgramID, "viewPos");
+            GLint lightPosLoc = glGetUniformLocation(shaderProgramID, "lightPos");
+            GLint lightColorLoc = glGetUniformLocation(shaderProgramID, "lightColor");
+            GLint shininessLoc = glGetUniformLocation(shaderProgramID, "shininess");
+            GLint texLoc = glGetUniformLocation(shaderProgramID, "diffuseTexture"); // Sampler
+
+            if (viewPosLoc != -1) glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
+            // TODO: Make lightPos dynamic or keep it fixed?
+            if (lightPosLoc != -1) glUniform3f(lightPosLoc, 1.0f, 2.0f, 3.0f); // Example light pos
+            if (lightColorLoc != -1) glUniform3f(lightColorLoc, 1.0f, 1.0f, 1.0f); // White light
+            if (shininessLoc != -1) glUniform1f(shininessLoc, 32.0f); // Example shininess
+
+            // Set texture for the pack model
+            if (texLoc != -1 && packTextureID != 0) {
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, packTextureID);
+                glUniform1i(texLoc, 0); // Tell sampler to use texture unit 0
+            }
+
+            // Let CardPack handle its own model matrix and drawing for the pack
+            cardPack->render(shaderProgramID, view, projection, packTextureID, cameraPos);
+
+            // Clean up texture binding
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glUseProgram(0); // Deactivate pack shader
+
+        }
+        else { // REVEALING or FINISHED state
+            // --- RENDER CARDS using card/holo shaders ---
+            // CardPack::render will handle activating card/holo shaders internally
+            // It now receives cameraPos needed for holo shader's viewPos uniform
+            cardPack->render(0, view, projection, 0, cameraPos); // Pass 0 for pack shader/texture IDs
+        }
     }
 
     // Deactivate the pack shader program and unbind texture AFTER pack and potentially cards have been drawn
@@ -247,6 +315,25 @@ void Application::motionCallback(int x, int y) {
 void Application::idleCallback() {
     application->update();
     glutPostRedisplay();
+}
+
+void Application::mouseWheelCallback(int wheel, int direction, int x, int y) {
+    // Pass to InputHandler or handle directly here
+    if (application && application->inputHandler) {
+        // Let InputHandler process it, as it knows the application state context
+        application->inputHandler->handleMouseWheel(wheel, direction, x, y);
+    }
+    // Or handle directly (simpler if InputHandler doesn't need complex state for zoom):
+    // if (application) {
+    //    float currentRadius = application->getCameraRadius();
+    //    float zoomSpeed = 0.5f;
+    //    if (direction > 0) { // Wheel scrolled up (or forward) -> Zoom in
+    //        application->setCameraRadius(currentRadius - zoomSpeed);
+    //    } else if (direction < 0) { // Wheel scrolled down (or backward) -> Zoom out
+    //        application->setCameraRadius(currentRadius + zoomSpeed);
+    //    }
+    //    glutPostRedisplay(); // Request redraw after zoom
+    // }
 }
 
 void Application::resetPack() {

@@ -6,6 +6,7 @@
 #include "CardPack.hpp"     // Needed for packPtr methods
 #include "TextureManager.hpp" // Needed for getApplicationTextureManager()->cycleShaderMode()
 #include <iostream>
+#include <cmath>
 
 void InputHandler::handleKeyPress(unsigned char key, int x, int y) {
     if (!packPtr) return;
@@ -63,11 +64,10 @@ void InputHandler::handleMouseClick(int button, int state, int x, int y) {
     if (!packPtr) return;
     if (button == GLUT_LEFT_BUTTON) {
         if (state == GLUT_DOWN) {
-            if (packPtr->getState() == CLOSED) {
-                mouseDown = true;
-                lastMouseX = x;
-                lastMouseY = y;
-            }
+            mouseDown = true; // Always track mouse down state
+            lastMouseX = x;
+            lastMouseY = y;
+            std::cout << "Mouse Down. State: " << packPtr->getState() << std::endl;
         }
         else { // GLUT_UP
             mouseDown = false;
@@ -77,11 +77,48 @@ void InputHandler::handleMouseClick(int button, int state, int x, int y) {
 
 void InputHandler::handleMouseMotion(int x, int y) {
     if (!packPtr) return;
-    if (mouseDown && packPtr->getState() == CLOSED) {
-        float rotX = (y - lastMouseY) * 0.01f;
-        float rotY = (x - lastMouseX) * 0.01f;
-        packPtr->rotate(rotX, rotY, 0.0f);
+    if (mouseDown) {
+        float deltaX = (float)(x - lastMouseX);
+        float deltaY = (float)(y - lastMouseY);
+
+        if (packPtr->getState() == CLOSED) {
+            // --- Rotate Pack Model ---
+            float rotY = deltaX * 0.008f; // Sensitivity for pack rotation
+            float rotX = deltaY * 0.008f;
+            packPtr->rotate(rotX, rotY, 0.0f); // Apply rotation to pack
+        }
+        else {
+            // --- Rotate Camera (Orbit) ---
+            float rotateSpeed = 0.005f; // Sensitivity for camera rotation
+            float newAzimuth = application->getCameraAzimuth() + deltaX * rotateSpeed;
+            float newElevation = application->getCameraElevation() + deltaY * rotateSpeed;
+
+            application->setCameraAzimuth(newAzimuth);
+            application->setCameraElevation(newElevation); // setCameraElevation clamps the value
+        }
+
         lastMouseX = x;
         lastMouseY = y;
+        glutPostRedisplay(); // Request redraw after movement
+    }
+}
+
+void InputHandler::handleMouseWheel(int wheel, int direction, int x, int y) {
+    if (!application || !packPtr) return;
+
+    // Only allow zooming when cards are revealed
+    if (packPtr->getState() != CLOSED) {
+        float currentRadius = application->getCameraRadius();
+        float zoomSpeed = 0.5f; // Adjust sensitivity
+
+        if (direction > 0) { // Wheel scrolled up/forward -> Zoom in
+            application->setCameraRadius(currentRadius - zoomSpeed);
+            // std::cout << "Zoom In (Wheel). New Radius: " << application->getCameraRadius() << std::endl;
+        }
+        else if (direction < 0) { // Wheel scrolled down/backward -> Zoom out
+            application->setCameraRadius(currentRadius + zoomSpeed);
+            // std::cout << "Zoom Out (Wheel). New Radius: " << application->getCameraRadius() << std::endl;
+        }
+        glutPostRedisplay(); // Request redraw after zoom
     }
 }

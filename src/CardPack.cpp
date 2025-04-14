@@ -164,7 +164,7 @@ void CardPack::generateCards(CardDatabase& database) { // database might not be 
     std::cout << "Finished generating " << cards.size() << " cards." << std::endl;
 }
 
-void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, GLuint packTextureID) {
+void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, GLuint packTextureID, const glm::vec3& cameraPos) {
     if (state == CLOSED) {
         // --- Render the Pack Model ---
         if (packModel) {
@@ -275,7 +275,7 @@ void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, c
             if (shaderApplied && card.getTextureID() != 0) { // Added check for card's texture ID
                 // The Card::render function needs the view and projection matrices
                 // It will handle its own model matrix based on its position/rotation/scale
-                card.render(viewMatrix, projectionMatrix);
+                card.render(viewMatrix, projectionMatrix, cameraPos);
             } else {
                 if (!shaderApplied) {
                     // std::cerr << "Skipping render for " << card.getPokemonName() << " due to invalid or missing shader." << std::endl;

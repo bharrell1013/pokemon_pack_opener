@@ -830,11 +830,11 @@ void TextureManager::applyHoloShader(const Card& card, float time) {
     }
 
 
-    float intensity = 0.0f;
-    if (card.getRarity() == "holo") intensity = 0.7f;
-    else if (card.getRarity() == "reverse") intensity = 0.4f;
-    else if (card.getRarity() == "ex") intensity = 0.8f;
-    else if (card.getRarity() == "full art") intensity = 0.9f;
+    float intensity = 1.0f;
+    if (card.getRarity() == "holo") intensity = 1.5f;
+    else if (card.getRarity() == "reverse") intensity = 1.2f;
+    else if (card.getRarity() == "ex") intensity = 2.0f;
+    else if (card.getRarity() == "full art") intensity = 2.5f;
 
     if (intensityLoc != -1) {
         glUniform1f(intensityLoc, intensity);

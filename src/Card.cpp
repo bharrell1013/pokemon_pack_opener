@@ -221,7 +221,7 @@ void Card::update(float deltaTime) {
 }
 
 // --- render ---
-void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix) const {
+void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPos) const {
     // 1. --- Sanity Checks ---
     if (!cardMesh) { /* ... error ... */ return; }
     if (!textureManager) { /* ... error ... */ return; }
@@ -266,10 +266,25 @@ void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix
     GLint holoIntensityLoc = glGetUniformLocation(currentShader, "holoIntensity"); // For holo shader
     GLint overlayIntensityLoc = glGetUniformLocation(currentShader, "overlayIntensity"); // For card shader
 
+    GLint viewPosLoc = glGetUniformLocation(currentShader, "viewPos");
+
     // Set matrix uniforms
     if (modelLoc != -1) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
     if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
     if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    if (viewPosLoc != -1) {
+        glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
+    }
+    else {
+         //Optional: Warn if viewPos uniform is missing, especially if using holo shader
+         //if (currentShader == textureManager->getHoloShaderID()) {
+         //    static bool viewPosWarned = false;
+         //    if (!viewPosWarned) {
+         //       std::cerr << "Warning: 'viewPos' uniform not found in active holo shader (ID: " << currentShader << ")" << std::endl;
+         //       viewPosWarned = true;
+         //    }
+         //}
+    }
 
     // *** Bind Textures to Units and Set Sampler Uniforms ***
     // Bind Base Texture to Unit 0

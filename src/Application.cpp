@@ -201,7 +201,7 @@ void Application::render() {
     // Render components that use the PACK shader
     if (cardPack) {
         // Pass PACK shader ID, view/projection matrices, AND packTextureID
-        cardPack->render(shaderProgramID, view, projection, packTextureID); // *** MODIFIED CALL ***
+        cardPack->render(shaderProgramID, view, projection, packTextureID, cameraPos);
     }
 
     // Deactivate the pack shader program and unbind texture AFTER pack and potentially cards have been drawn

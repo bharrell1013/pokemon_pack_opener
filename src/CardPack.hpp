@@ -44,7 +44,7 @@ public:
 
     void generateCards(CardDatabase& database);
     // *** MODIFIED Signature ***
-    void render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, GLuint packTextureID);
+    void render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, GLuint packTextureID, const glm::vec3& cameraPos);
     void update(float deltaTime);
     //void startOpeningAnimation();
     //bool isOpeningComplete() const;

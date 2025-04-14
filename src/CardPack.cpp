@@ -19,14 +19,14 @@ CardPack::CardPack(TextureManager* texManager) :
     animationSpeed(8.0f),
     isAnimating(false),
     position(glm::vec3(0.0f)),
-    rotation(glm::vec3(0.0f))
+    rotation(glm::vec3(0.0f)),
+    cardMovingToBackIndex(-1)
 {
     if (!textureManager) {
          throw std::runtime_error("CardPack created with null TextureManager!");
     }
 
     frontPosition = glm::vec3(0.0f, 0.0f, stackCenter.z + stackSpacing * 3.0f);
-    std::cout << "[Debug] Constructor - Front Position Z: " << frontPosition.z << std::endl;
 
     std::cout << "CardPack constructor: Attempting to load pack model..." << std::endl;
     std::string packModelPath = "models/pack.obj";
@@ -64,7 +64,6 @@ CardPack::CardPack(TextureManager* texManager) :
             throw std::runtime_error("Cannot find any model (pack.obj or cube.obj)");
         }
     }
-     std::cout << "[DEBUG] CardPack Constructor - textureManager ptr: " << textureManager << std::endl;
 }
 
 CardPack::~CardPack() {
@@ -298,24 +297,51 @@ void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, c
     // Add rendering for FINISHED state if different from REVEALING
 }
 
+// --- UPDATE Method ---
 void CardPack::update(float deltaTime) {
-    // Update cards (handles their individual animations)
     bool anyCardMoving = false;
     if (state == REVEALING) {
-        for (auto& card : cards) {
+        // Iterate WITH index now
+        for (size_t i = 0; i < cards.size(); ++i) {
+            auto& card = cards[i]; // Get reference to the card
+
+            // Store previous animation state
+            bool wasAnimating = card.isCardAnimating();
+
+            // Update the card's position/interpolation
             card.update(deltaTime);
+
+            // Check if this card is the one doing the special move-to-back
+            if (cardMovingToBackIndex != -1 && i == cardMovingToBackIndex) {
+                // Check if it *was* animating but *just stopped* (meaning it reached the intermediate point)
+                if (wasAnimating && !card.isCardAnimating()) {
+
+                    // --- Start Stage 2: Set final target ---
+                    int lastStackIndex = cards.size() - 1;
+                    float targetLastStackZ = stackCenter.z - lastStackIndex * stackSpacing;
+                    glm::vec3 targetLastStackPos = glm::vec3(stackCenter.x, stackCenter.y, targetLastStackZ);
+                    glm::vec3 targetLastStackRot = glm::vec3(0.0f); // Face camera at the end
+
+                    card.setTargetTransform(targetLastStackPos, targetLastStackRot, card.getScale());
+                    // --- End Stage 2 setup ---
+
+                    // Reset the tracking index, this card is now doing a normal animation
+                    cardMovingToBackIndex = -1;
+                }
+            }
+
+            // Track if *any* card is still moving (for the main isAnimating flag)
             if (card.isCardAnimating()) {
                 anyCardMoving = true;
             }
-        }
-    }
+        } // End card loop
+    } // End if (state == REVEALING)
 
-    // Update global pack animation flag if needed
+    // Update global pack animation flag
+    // This flag now correctly reflects if *any* card animation (including Stage 2) is ongoing
     if (isAnimating && !anyCardMoving) {
-        isAnimating = false; // Last card finished moving
-        // std::cout << "Pack animation finished." << std::endl;
+        isAnimating = false; // All individual card animations finished
     }
-
 }
 
 void CardPack::startOpeningAnimation() {
@@ -364,68 +390,90 @@ void CardPack::cycleCard() {
 
     // Prevent cycling if the pack is still animating cards into position
     if (isAnimating) {
-        bool stillMoving = false;
-        for (const auto& card : cards) {
-            if (card.isCardAnimating()) {
-                stillMoving = true;
-                break;
+        bool checkIndividualCards = false;
+        if (cardMovingToBackIndex != -1) {
+            // If we know a card is doing the special move, check specifically if IT is still moving
+            if (cards[cardMovingToBackIndex].isCardAnimating()) {
+                std::cout << "Cannot cycle card yet, card " << cardMovingToBackIndex << " moving to side." << std::endl;
+                return;
+            }
+            else {
+                // It finished stage 1, update() should handle stage 2 trigger.
+                // But we still need to check other cards below.
+                checkIndividualCards = true;
             }
         }
-        if (stillMoving) {
-            std::cout << "Cannot cycle card yet, animation in progress." << std::endl;
-            return; // Wait for the current animation to finish
+        else {
+            // No special move active, check all cards generally
+            checkIndividualCards = true;
         }
-         else {
-            isAnimating = false; // Reset flag if movement just finished
+
+        if (checkIndividualCards) {
+            bool stillMoving = false;
+            for (const auto& card : cards) {
+                // Skip the card we might have already checked if it was the special one
+                // and skip the one currently at the front (which shouldn't be moving)
+                if (&card == &cards[currentCardIndex] || (cardMovingToBackIndex != -1 && &card == &cards[cardMovingToBackIndex])) continue;
+
+                if (card.isCardAnimating()) {
+                    stillMoving = true;
+                    break;
+                }
+            }
+            if (stillMoving) {
+                std::cout << "Cannot cycle card yet, stack animation in progress." << std::endl;
+                return; // Wait for the current animation to finish
+            }
+            else {
+                // If we get here, means no cards are animating according to their own state
+                isAnimating = false; // Force reset the pack flag if individual cards disagree
+            }
         }
     }
 
     // --- Start cycle animation ---
     isAnimating = true; // Mark that a new animation is starting
+    cardMovingToBackIndex = -1;
 
     int prevFrontCardIdx = currentCardIndex;
     int newFrontCardIdx = (currentCardIndex + 1) % cards.size();
 
-    // --- 1. Calculate Target for the Card Moving FROM Front ---
-   // It needs to go to the LAST position in the VISIBLE stack (index cards.size() - 1 relative to new front).
-    int lastStackIndex = cards.size() - 1;
-    float targetLastStackZ = stackCenter.z - lastStackIndex * stackSpacing;
-    glm::vec3 targetLastStackPos = glm::vec3(stackCenter.x, stackCenter.y, targetLastStackZ);
-    glm::vec3 targetLastStackRot = glm::vec3(0.0f); // <<< MUST face the camera now
+    // --- 1. Start Stage 1 for the Card Moving FROM Front ---
+    // Calculate the INTERMEDIATE position (offset to the side)
+    // TUNABLE PARAMETERS: Adjust x, y, z offsets for desired path
+    float sideOffsetX = 1.8f;   // How far sideways
+    float sideOffsetY = 0.1f;   // Slight lift?
+    float sideOffsetZ = -0.4f;  // Move back slightly, but less than stack width
+    glm::vec3 intermediateSidePos = frontPosition + glm::vec3(sideOffsetX, sideOffsetY, sideOffsetZ);
+    // Keep rotation facing camera during side move (or adjust if desired)
+    glm::vec3 intermediateSideRot = glm::vec3(0.0f);
 
-    // Set the target for the PREVIOUS front card to become the LAST stack card
-    cards[prevFrontCardIdx].setTargetTransform(targetLastStackPos, targetLastStackRot, cards[prevFrontCardIdx].getScale());
-    // --- End Change for Step 1 ---
+    // Set the target to the intermediate position
+    cards[prevFrontCardIdx].setTargetTransform(intermediateSidePos, intermediateSideRot, cards[prevFrontCardIdx].getScale());
 
-    // 2. Move the NEW front card to the front position (rotated 0 degrees) - REMAINS SAME
+    // Mark this card as the one doing the special move
+    cardMovingToBackIndex = prevFrontCardIdx;
+    // --- End Stage 1 Setup ---
+
+    // 2. Move the NEW front card to the front position - REMAINS SAME
     cards[newFrontCardIdx].setTargetTransform(frontPosition, glm::vec3(0.0f), cards[newFrontCardIdx].getScale());
 
     // 3. Update ALL OTHER cards in the visible stack - REMAINS SAME
-    // This loop correctly handles cards moving from stack indices 1 -> 1, 2 -> 1, ..., n-2 -> n-3
+    // (This loop shifts the existing stack forward)
     for (size_t i = 0; i < cards.size(); ++i) {
-        // Skip the card that just moved to the back (now last stack slot)
-        // and the card moving to the front
-        if (i == prevFrontCardIdx || i == newFrontCardIdx) {
-            continue;
-        }
-
-        // Calculate the card's new index RELATIVE to the *new* front card
+        if (i == prevFrontCardIdx || i == newFrontCardIdx) continue; // Skip the two active cards
         int stackIndex = (i - newFrontCardIdx + cards.size()) % cards.size();
-
-        // Calculate target position in the visible stack
         float targetZ = stackCenter.z - stackIndex * stackSpacing;
         glm::vec3 targetPos = glm::vec3(stackCenter.x, stackCenter.y, targetZ);
-        glm::vec3 targetRot = glm::vec3(0.0f); // Ensure it faces the camera
-        glm::vec3 targetScale = cards[i].getScale(); // Keep scale
-
+        glm::vec3 targetRot = glm::vec3(0.0f);
+        glm::vec3 targetScale = cards[i].getScale();
         cards[i].setTargetTransform(targetPos, targetRot, targetScale);
     }
 
     // 4. Update the current front index - REMAINS SAME
     currentCardIndex = newFrontCardIdx;
 
-    std::cout << "Cycling card. Prev front " << prevFrontCardIdx << " -> last stack pos (Z=" << targetLastStackZ << "). New front " << currentCardIndex << " -> front." << std::endl;
-
+    std::cout << "Cycling card. Prev front " << prevFrontCardIdx << " -> starting move to side. New front " << currentCardIndex << " -> front." << std::endl;
     // Optional: Transition to FINISHED state after a full cycle?
     // if (currentCardIndex == 0) { // Just completed a full loop
     //     // state = FINISHED;

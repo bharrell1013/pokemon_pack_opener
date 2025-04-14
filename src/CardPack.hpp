@@ -33,6 +33,7 @@ private:
     float stackSpacing;          // Z-spacing between cards in the stack
     float animationSpeed;        // How fast cards move between positions
     bool isAnimating;            // Flag to prevent cycling during movement 
+    int cardMovingToBackIndex; // Index of the card doing the side-then-back move, or -1 if none
 
     // Pack properties
     glm::vec3 position;

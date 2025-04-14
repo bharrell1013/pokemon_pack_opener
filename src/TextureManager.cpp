@@ -122,35 +122,51 @@ GLuint TextureManager::loadTexture(const std::string& pathOrUrl) {
 
     glBindTexture(GL_TEXTURE_2D, textureID);
 
-    // Set texture parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Or GL_CLAMP_TO_EDGE
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); // Or GL_CLAMP_TO_EDGE
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
     // Determine texture format
     GLenum internalFormat = GL_RGB;
     GLenum dataFormat = GL_RGB;
+    int bytesPerPixel = 3;         // Default guess
     if (channels == 4) {
         internalFormat = GL_RGBA;
         dataFormat = GL_RGBA;
+        bytesPerPixel = 4;
     } else if (channels == 3) {
         internalFormat = GL_RGB;
         dataFormat = GL_RGB;
+        bytesPerPixel = 3;
     } else if (channels == 1) {
         internalFormat = GL_RED; // Treat single channel as RED
         dataFormat = GL_RED;
+        bytesPerPixel = 1;
         std::cout << "Warning: Loading texture " << pathOrUrl << " as single channel (GL_RED)." << std::endl;
     } else {
         std::cerr << "Error: Unsupported number of channels (" << channels << ") for texture: " << pathOrUrl << std::endl;
         stbi_image_free(data);
         glDeleteTextures(1, &textureID); // Clean up generated ID
+        glBindTexture(GL_TEXTURE_2D, 0);
         return 0;
+    }
+
+    // If the row stride (width * bytesPerPixel) is not a multiple of 4, set alignment to 1.
+    if ((width * bytesPerPixel) % 4 != 0) {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        // std::cout << "[Debug] Setting UNPACK_ALIGNMENT to 1 for " << pathOrUrl << std::endl;
+    }
+    else {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4); // Ensure it's 4 otherwise (the default)
     }
 
     // Upload texture data
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
+    // Reset Pixel Unpack Alignment to Default
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     glGenerateMipmap(GL_TEXTURE_2D);
+
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Or GL_CLAMP_TO_EDGE
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); // Or GL_CLAMP_TO_EDGE
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     // Check for OpenGL errors during texture creation
     GLenum err;
@@ -575,24 +591,22 @@ GLuint TextureManager::loadTextureFromMemory(const std::vector<unsigned char>& i
     }
     glBindTexture(GL_TEXTURE_2D, textureID);
 
-    // Set texture parameters (same as file loading)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
     // Determine format (same as file loading)
     GLenum internalFormat = GL_RGB;
     GLenum dataFormat = GL_RGB;
+    int bytesPerPixel = 3;
     if (channels == 4) {
         internalFormat = GL_RGBA;
         dataFormat = GL_RGBA;
+        bytesPerPixel = 4;
     } else if (channels == 3) {
         internalFormat = GL_RGB;
         dataFormat = GL_RGB;
+        bytesPerPixel = 3;
     } else if (channels == 1) {
         internalFormat = GL_RED;
         dataFormat = GL_RED;
+        bytesPerPixel = 1;
     } else {
         std::cerr << "Error: Unsupported number of channels (" << channels << ") for memory texture: " << cacheKey << std::endl;
         stbi_image_free(data);
@@ -600,9 +614,25 @@ GLuint TextureManager::loadTextureFromMemory(const std::vector<unsigned char>& i
         return 0;
     }
 
+    // --- FIX: Set Pixel Unpack Alignment ---
+    if ((width * bytesPerPixel) % 4 != 0) {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        // std::cout << "[Debug] Setting UNPACK_ALIGNMENT to 1 for " << cacheKey << std::endl;
+    }
+    else {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    }
+
     // Upload texture data
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     glGenerateMipmap(GL_TEXTURE_2D);
+
+    // Set texture parameters (same as file loading)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
      // Check for OpenGL errors
     GLenum err;

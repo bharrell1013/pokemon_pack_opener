@@ -21,10 +21,20 @@ using json = nlohmann::json; // Alias for convenience
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-TextureManager::TextureManager() : cardShader(0), holoShader(0), currentShader(0) {
+TextureManager::TextureManager() : cardShader(0), holoShader(0), currentShader(0), cardBackTextureID(0) {
     // Ensure OpenGL context is available before initializing shaders
     // This should be guaranteed by the call order in Application::initialize
     initializeShaders();
+    std::string backTexPath = "textures/cards/card_back.png";
+    std::cout << "Loading card back texture: " << backTexPath << std::endl;
+    cardBackTextureID = loadTexture(backTexPath);
+    if (cardBackTextureID == 0) {
+        std::cerr << "!!!!!!!! FAILED TO LOAD CARD BACK TEXTURE !!!!!!!!" << std::endl;
+        // Maybe load placeholder or throw error if essential
+    }
+    else {
+        std::cout << "Card back texture loaded. ID: " << cardBackTextureID << std::endl;
+    }
     if (cardShader == 0 || holoShader == 0) {
         std::cerr << "FATAL: One or more shader programs failed to initialize correctly!" << std::endl;
         // Consider throwing an exception or setting an error state

@@ -203,7 +203,7 @@ void Card::update(float deltaTime) {
 
         // --- Check if animation is complete ---
         // Check if the current state is very close to the target state.
-        const float threshold = 0.01f; // Adjust threshold based on animation speed and visual needs
+        const float threshold = 0.02f; // Adjust threshold based on animation speed and visual needs
         bool positionReached = glm::distance(position, targetPosition) < threshold;
         // Angle check remains approximate with lerp
         bool rotationReached = glm::distance(rotation, targetRotation) < threshold;
@@ -223,8 +223,8 @@ void Card::update(float deltaTime) {
 // --- render ---
 void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPos) const {
     // 1. --- Sanity Checks ---
-    if (!cardMesh) { /* ... error ... */ return; }
-    if (!textureManager) { /* ... error ... */ return; }
+    if (!cardMesh) { std::cerr << "Error: Card::render - cardMesh is null for " << pokemonName << std::endl; return; }
+    if (!textureManager) { std::cerr << "Error: Card::render - textureManager is null for " << pokemonName << std::endl; return; }
     // Check BOTH texture IDs now
     if (textureID == 0) {
          // std::cerr << "Warning: Card::render - Rendering '" << pokemonName << "' with BASE texture ID 0." << std::endl;
@@ -232,6 +232,11 @@ void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix
      if (overlayTextureID == 0) {
          // This is less critical, the card can render without overlay, but log maybe.
          // std::cout << "Info: Card::render - Rendering '" << pokemonName << "' without overlay (Overlay ID 0)." << std::endl;
+     }
+     GLuint backTextureID = textureManager->getCardBackTextureID();
+     if (backTextureID == 0) {
+         std::cerr << "Warning: Card::render - Invalid Back Texture ID (0) for " << pokemonName << std::endl;
+         // Render will likely look wrong on the back face
      }
 
     // 2. --- Get Active Shader ---
@@ -258,6 +263,7 @@ void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix
     // *** Get Texture Sampler Locations ***
     GLint baseTexSamplerLoc = glGetUniformLocation(currentShader, "baseTexture"); // Use new name
     GLint overlayTexSamplerLoc = glGetUniformLocation(currentShader, "overlayTexture"); // Use new name
+	GLint backTexSamplerLoc = glGetUniformLocation(currentShader, "backTexture"); // For back face rendering
 
     // Get other potential uniforms
     GLint cardTypeLoc = glGetUniformLocation(currentShader, "cardType");
@@ -310,6 +316,21 @@ void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix
          }
     }
 
+    // --- Unit 2: Back Texture ---
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, backTextureID); // Bind the loaded back texture ID
+    if (backTexSamplerLoc != -1) {
+        glUniform1i(backTexSamplerLoc, 2); // Tell sampler uniform to use texture unit 2
+    }
+    else {
+        // Warn if sampler is missing, as back face won't render correctly
+        static bool backWarned = false;
+        if (!backWarned && backTextureID != 0) {
+            std::cerr << "Warning: 'backTexture' uniform sampler not found in shader " << currentShader << std::endl;
+            backWarned = true;
+        }
+    }
+
     // Set other uniforms based on which shader is active
     if (currentShader == textureManager->getCardShaderID()) { // Check if it's the normal card shader
          if (cardTypeLoc != -1) glUniform1i(cardTypeLoc, textureManager->getTypeValue(pokemonType));
@@ -348,6 +369,8 @@ void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix
 
     // 6. --- Clean up ---
     // Unbind textures from units (good practice)
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, 0);
     glActiveTexture(GL_TEXTURE0);

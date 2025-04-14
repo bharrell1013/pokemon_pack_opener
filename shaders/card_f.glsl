@@ -5,6 +5,7 @@ in vec2 TexCoord;
 
 uniform sampler2D baseTexture;    // Renamed from cardTexture for clarity
 uniform sampler2D overlayTexture; // L-System Overlay
+uniform sampler2D backTexture;
 uniform int cardType;             // Keep for potential future use, but tinting might be less needed now
 uniform int cardRarity;           // Keep for potential future use
 
@@ -23,58 +24,47 @@ const vec3 typeColors[12] = vec3[12](
 
 void main()
 {
-    // Sample overlay texture (L-System)
-    vec4 overlayColor = texture(overlayTexture, TexCoord);
+    vec3 finalColor;
 
-    // Sample base texture (API image)
-    vec4 baseColor = texture(baseTexture, TexCoord);
+    if (gl_FrontFacing) {
+        // --- FRONT FACE LOGIC ---
+        vec4 overlayColor = texture(overlayTexture, TexCoord);
+        vec4 baseColor = texture(baseTexture, TexCoord);
 
-    // --- Blending Logic ---
-    // Option 1: Additive Blend (Makes things brighter where overlay exists)
-     vec3 blendedColor = baseColor.rgb + overlayColor.rgb * overlayColor.a * overlayIntensity;
+        // Blend overlay onto base (Choose your preferred blend mode)
+        vec3 blendedColor = mix(baseColor.rgb, overlayColor.rgb, overlayColor.a * overlayIntensity);
+        // Or: vec3 blendedColor = baseColor.rgb + overlayColor.rgb * overlayColor.a * overlayIntensity;
 
-    // Option 2: Alpha Blend (Overlay drawn 'on top' based on its alpha)
-    // vec3 blendedColor = mix(baseColor.rgb, overlayColor.rgb, overlayColor.a * overlayIntensity);
+        // --- !!! TEMPORARY: Force Usage of Uniforms !!! ---
+        // Add a slight tint based on type and rarity just to ensure they are used
+        // This prevents the compiler from optimizing them away.
+        if (cardRarity > 0) {
+           blendedColor.r += 0.001 * float(cardRarity); // Tiny modification using rarity
+        }
+        if (cardType >= 0 && cardType < 12) {
+           blendedColor.g += 0.001 * float(cardType); // Tiny modification using type
+        }
+        // --- End Temporary Usage ---
 
-    // Option 3: Multiplicative Blend (Darkens/tints based on overlay)
-    // vec3 blendedColor = baseColor.rgb * mix(vec3(1.0), overlayColor.rgb, overlayColor.a * overlayIntensity);
+        // --- Shader Mode Selection for Front Face ---
+        if (renderMode == 1) { // Overlay Only
+            finalColor = overlayColor.rgb;
+        } else if (renderMode == 2) { // Base Only
+            finalColor = baseColor.rgb;
+        } else { // Normal Blended (Mode 0 or default)
+            finalColor = blendedColor;
+        }
 
-    // Option 4: Screen Blend (Brighter, good for light patterns)
-     //vec3 blendedColor = vec3(1.0) - (vec3(1.0) - baseColor.rgb) * (vec3(1.0) - overlayColor.rgb * overlayIntensity);
-     //blendedColor = mix(baseColor.rgb, blendedColor, overlayColor.a); // Use overlay alpha
+        // Keep alpha from the base texture (usually opaque)
+        FragColor = vec4(clamp(finalColor, 0.0, 1.0), baseColor.a);
 
-     // --- !!! TEMPORARY: Force Usage of Uniforms !!! ---
-    // Add a slight tint based on type and rarity just to ensure they are used
-    // This prevents the compiler from optimizing them away.
-    if (cardRarity > 0) {
-       blendedColor.r += 0.001 * float(cardRarity); // Tiny modification using rarity
-    }
-    if (cardType >= 0 && cardType < 12) {
-       blendedColor.g += 0.001 * float(cardType); // Tiny modification using type
-    }
-    // --- End Temporary Usage ---
+    } else {
+        // --- BACK FACE LOGIC ---
+        // Simply sample the back texture
+        finalColor = texture(backTexture, TexCoord).rgb;
 
-
-    // --- Optional: Apply previous rarity/type adjustments if still desired ---
-    // vec3 finalColor = blendedColor; // Start with blended result
-    // vec3 typeColor = typeColors[cardType];
-    // finalColor = mix(finalColor, typeColor, 0.1); // Even more subtle tint now
-
-    // float brightness = 1.0 + float(cardRarity > 0) * 0.05; // Less adjustment maybe
-    // float contrast = 1.0 + float(cardRarity > 0) * 0.1;
-    // finalColor = (finalColor - 0.5) * contrast + 0.5;
-    // finalColor *= brightness;
-
-    // Ensure final alpha uses base texture's alpha (or 1.0 if base is opaque)
-    //FragColor = vec4(clamp(blendedColor, 0.0, 1.0), baseColor.a);
-    //FragColor = texture(overlayTexture, TexCoord);
-
-    // --- Select Output Based on Mode ---
-    if (renderMode == 1) { // Overlay Only
-        FragColor = vec4(overlayColor.rgb, overlayColor.a); // Use overlay color and alpha
-    } else if (renderMode == 2) { // Base Only
-        FragColor = baseColor; // Use base color and alpha directly
-    } else { // Normal Blended (Mode 0 or default)
-        FragColor = vec4(clamp(blendedColor, 0.0, 1.0), baseColor.a); // Output blended result
+        // Back face ignores renderMode for simplicity, always shows back texture
+        // Back face alpha is assumed opaque
+        FragColor = vec4(finalColor, 1.0);
     }
 }

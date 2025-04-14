@@ -67,7 +67,6 @@ void InputHandler::handleMouseClick(int button, int state, int x, int y) {
             mouseDown = true; // Always track mouse down state
             lastMouseX = x;
             lastMouseY = y;
-            std::cout << "Mouse Down. State: " << packPtr->getState() << std::endl;
         }
         else { // GLUT_UP
             mouseDown = false;

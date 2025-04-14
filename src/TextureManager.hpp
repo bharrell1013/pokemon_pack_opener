@@ -33,6 +33,7 @@ private:
     GLuint cardShader = 0;        // Standard card shader program
     GLuint holoShader = 0;        // Holographic effect shader program
     GLuint currentShader = 0;     // Currently active shader program
+	GLuint cardBackTextureID = 0; // Texture ID for card back
 
     int shaderRenderMode = 0; // 0: Normal, 1: Overlay Only, 2: Base Only
 
@@ -90,6 +91,7 @@ public:
     GLuint getCurrentShader() const { return currentShader; }
     GLuint getCardShaderID() const { return cardShader; }
     GLuint getHoloShaderID() const { return holoShader; }
+    GLuint getCardBackTextureID() const { return cardBackTextureID; }
 };
 
 #endif

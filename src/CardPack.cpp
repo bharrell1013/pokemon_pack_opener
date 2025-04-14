@@ -13,9 +13,9 @@ CardPack::CardPack(TextureManager* texManager) :
     textureManager(texManager), // Ensure this is initialized
     currentCardIndex(0),
     stackCenter(0.0f, 0.0f, 0.0f),
-    frontPosition(0.0f, 0.0f, 1.5f), // Adjust Z based on camera distance
-    backPositionOffset(0.0f, 0.0f, -0.5f), // How far back the cycled card goes relative to stack end
-    stackSpacing(0.015f), // Make cards closer in the stack initially
+    frontPosition(0.0f),
+    backPositionOffset(0.0f, 0.0f, -1.0f), // How far back the cycled card goes relative to stack end
+    stackSpacing(0.025f), // Make cards closer in the stack initially
     animationSpeed(8.0f),
     isAnimating(false),
     position(glm::vec3(0.0f)),
@@ -24,6 +24,10 @@ CardPack::CardPack(TextureManager* texManager) :
     if (!textureManager) {
          throw std::runtime_error("CardPack created with null TextureManager!");
     }
+
+    frontPosition = glm::vec3(0.0f, 0.0f, stackCenter.z + stackSpacing * 3.0f);
+    std::cout << "[Debug] Constructor - Front Position Z: " << frontPosition.z << std::endl;
+
     std::cout << "CardPack constructor: Attempting to load pack model..." << std::endl;
     std::string packModelPath = "models/pack.obj";
     std::string fallbackModelPath = "models/cube.obj"; // Fallback if pack fails
@@ -222,6 +226,8 @@ void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, c
             return;
         }
 
+        glDisable(GL_CULL_FACE);
+
         // Get current time for holo shader animation
         // Ensure glut is initialized before calling this!
         float currentTime = 0.0f;
@@ -286,7 +292,8 @@ void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, c
             }
         }
          // After rendering all cards, maybe unbind the last used shader? Optional.
-         // glUseProgram(0);
+         glUseProgram(0);
+         glEnable(GL_CULL_FACE);
     }
     // Add rendering for FINISHED state if different from REVEALING
 }
@@ -330,8 +337,11 @@ void CardPack::startOpeningAnimation() {
             float zPos = stackCenter.z - i * stackSpacing; // Use the original stack spacing for target
             glm::vec3 targetPos = glm::vec3(stackCenter.x, stackCenter.y, zPos);
 
+            // --- SET TARGET ROTATION TO 0 ---
+            glm::vec3 targetRot = glm::vec3(0.0f); // Face the camera
+
             // Keep them facing away initially until cycled? Or turn them now? Let's keep facing away.
-            glm::vec3 targetRot = cards[i].getRotation(); // Keep initial rotation (facing away)
+            //glm::vec3 targetRot = cards[i].getRotation(); // Keep initial rotation (facing away)
             glm::vec3 targetScale = cards[i].getScale();  // Keep initial scale
 
             cards[i].setTargetTransform(targetPos, targetRot, targetScale);
@@ -373,32 +383,48 @@ void CardPack::cycleCard() {
     // --- Start cycle animation ---
     isAnimating = true; // Mark that a new animation is starting
 
-    // 1. Identify current front card index
-    int frontCardIdx = currentCardIndex;
+    int prevFrontCardIdx = currentCardIndex;
+    int newFrontCardIdx = (currentCardIndex + 1) % cards.size();
 
-    // 2. Identify the next card index to bring to the front
-    int nextCardIdx = (currentCardIndex + 1) % cards.size();
+    // --- 1. Calculate Target for the Card Moving FROM Front ---
+   // It needs to go to the LAST position in the VISIBLE stack (index cards.size() - 1 relative to new front).
+    int lastStackIndex = cards.size() - 1;
+    float targetLastStackZ = stackCenter.z - lastStackIndex * stackSpacing;
+    glm::vec3 targetLastStackPos = glm::vec3(stackCenter.x, stackCenter.y, targetLastStackZ);
+    glm::vec3 targetLastStackRot = glm::vec3(0.0f); // <<< MUST face the camera now
 
-    // 3. Calculate target position for the card moving to the back
-    // Place it behind the *last* card's initial stack position + offset
-    // We need to find where the "end" of the stack is now dynamically based on card positions?
-    // Or simpler: just place it relative to the original stack center but far back.
-    float backZ = stackCenter.z - (cards.size()) * stackSpacing + backPositionOffset.z; // Z behind original stack
-    glm::vec3 targetBackPos = glm::vec3(stackCenter.x + backPositionOffset.x,
-                                      stackCenter.y + backPositionOffset.y,
-                                      backZ);
-    glm::vec3 targetBackRot = glm::vec3(0.0f, glm::radians(180.0f), 0.0f); // Rotate to face away at the back
+    // Set the target for the PREVIOUS front card to become the LAST stack card
+    cards[prevFrontCardIdx].setTargetTransform(targetLastStackPos, targetLastStackRot, cards[prevFrontCardIdx].getScale());
+    // --- End Change for Step 1 ---
 
-    // 4. Set targets
-    // Move current front card to the calculated back position
-    cards[frontCardIdx].setTargetTransform(targetBackPos, targetBackRot, cards[frontCardIdx].getScale());
-    // Move the next card to the front position, facing the camera
-    cards[nextCardIdx].setTargetTransform(frontPosition, glm::vec3(0.0f), cards[nextCardIdx].getScale());
+    // 2. Move the NEW front card to the front position (rotated 0 degrees) - REMAINS SAME
+    cards[newFrontCardIdx].setTargetTransform(frontPosition, glm::vec3(0.0f), cards[newFrontCardIdx].getScale());
 
-    // 5. Update the current card index
-    currentCardIndex = nextCardIdx;
+    // 3. Update ALL OTHER cards in the visible stack - REMAINS SAME
+    // This loop correctly handles cards moving from stack indices 1 -> 1, 2 -> 1, ..., n-2 -> n-3
+    for (size_t i = 0; i < cards.size(); ++i) {
+        // Skip the card that just moved to the back (now last stack slot)
+        // and the card moving to the front
+        if (i == prevFrontCardIdx || i == newFrontCardIdx) {
+            continue;
+        }
 
-    std::cout << "Cycling card. Card " << frontCardIdx << " moving to back. Card " << currentCardIndex << " moving to front." << std::endl;
+        // Calculate the card's new index RELATIVE to the *new* front card
+        int stackIndex = (i - newFrontCardIdx + cards.size()) % cards.size();
+
+        // Calculate target position in the visible stack
+        float targetZ = stackCenter.z - stackIndex * stackSpacing;
+        glm::vec3 targetPos = glm::vec3(stackCenter.x, stackCenter.y, targetZ);
+        glm::vec3 targetRot = glm::vec3(0.0f); // Ensure it faces the camera
+        glm::vec3 targetScale = cards[i].getScale(); // Keep scale
+
+        cards[i].setTargetTransform(targetPos, targetRot, targetScale);
+    }
+
+    // 4. Update the current front index - REMAINS SAME
+    currentCardIndex = newFrontCardIdx;
+
+    std::cout << "Cycling card. Prev front " << prevFrontCardIdx << " -> last stack pos (Z=" << targetLastStackZ << "). New front " << currentCardIndex << " -> front." << std::endl;
 
     // Optional: Transition to FINISHED state after a full cycle?
     // if (currentCardIndex == 0) { // Just completed a full loop

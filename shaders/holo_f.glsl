@@ -7,6 +7,7 @@ in vec3 Normal;
 
 uniform sampler2D baseTexture;
 uniform sampler2D overlayTexture;
+uniform sampler2D backTexture; 
 
 uniform float time;
 // Suggest increasing holoIntensity passed from C++ (e.g., to 1.5 or 2.0)
@@ -49,7 +50,9 @@ float noise(vec2 p) {
 
 void main()
 {
-    // --- Sample Textures ---
+    // --- Front Face Logic ---
+    if (gl_FrontFacing) {
+        // --- Sample Textures ---
     vec4 baseColor = texture(baseTexture, TexCoord);
     vec4 overlay = texture(overlayTexture, TexCoord);
 
@@ -137,4 +140,14 @@ void main()
         // Clamp final color and set alpha from base texture
         FragColor = vec4(clamp(finalColor, 0.0, 1.0), baseColor.a);
     }
+    } else {
+        // --- BACK FACE LOGIC ---
+        // Flip the horizontal texture coordinate for the back face
+        vec2 backTexCoord = vec2(1.0 - TexCoord.x, TexCoord.y);
+        // Sample the back texture using the flipped coordinates
+        vec3 backColor = texture(backTexture, backTexCoord).rgb;
+        // Back face ignores renderMode, always shows back texture
+        FragColor = vec4(backColor, 1.0); // Assume opaque back
+    }
+    
 }

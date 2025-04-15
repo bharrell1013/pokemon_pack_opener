@@ -224,10 +224,10 @@ std::string TextureManager::fetchCardImageUrl(const Card& card) {
     std::string typeQueryPart = "";
 
     if (!cardType.empty() && cardType != "Colorless" && cardType != "Normal") { // Adjusted logic slightly for clarity
-        typeQueryPart = " types:" + cardType;
+        typeQueryPart = "types:" + cardType;
     }
     else if (cardType == "Normal" || cardType == "Colorless") { // Group Normal/Colorless as Colorless type in API
-        typeQueryPart = " types:Colorless";
+        typeQueryPart = "types:Colorless";
     }
     // Add handling for other card types (Trainer, Energy) if needed
 

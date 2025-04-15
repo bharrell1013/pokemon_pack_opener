@@ -26,6 +26,7 @@ public:
     void handleMouseClick(int button, int state, int x, int y);
     void handleMouseMotion(int x, int y);
     void handleMouseWheel(int wheel, int direction, int x, int y);
+    void handleSpecialKeyPress(int key, int x, int y);
     void resetState() { mouseDown = false; }
 };
 

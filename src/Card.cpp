@@ -15,6 +15,7 @@ Card::Card(std::string name, std::string type, std::string rarity, TextureManage
     rarity(std::move(rarity)),
     textureID(0),                         // Initialize textureID to 0 (invalid)
     overlayTextureID(0),                  // Initialize overlay texture ID to 0 (invalid)
+	generatedOverlayLevel(-1), 		      // Initialize overlay level to -1 (not generated)
     textureManager(texManager),           // Store pointer to TextureManager
     position(glm::vec3(0.0f)),            // Initial position
     rotation(glm::vec3(0.0f)),            // Initial rotation
@@ -55,6 +56,7 @@ Card::Card(const Card& other) :
     rarity(other.rarity),
     textureID(other.textureID), // Texture Manager owns texture, just copy ID
     overlayTextureID(other.overlayTextureID),
+    generatedOverlayLevel(other.generatedOverlayLevel),
     cardMesh(other.cardMesh),   // Share the mesh pointer
     textureManager(other.textureManager),
     position(other.position),
@@ -79,6 +81,7 @@ Card& Card::operator=(const Card& other) {
         rarity = other.rarity;
         textureID = other.textureID;
         overlayTextureID = other.overlayTextureID;
+        generatedOverlayLevel = other.generatedOverlayLevel;
         cardMesh = other.cardMesh;
         textureManager = other.textureManager;
         position = other.position;
@@ -447,3 +450,8 @@ void Card::setOverlayTextureID(GLuint id)
 {
 	this->overlayTextureID = id;
 }
+
+void Card::setGeneratedOverlayLevel(int level) {
+    this->generatedOverlayLevel = level;
+}
+

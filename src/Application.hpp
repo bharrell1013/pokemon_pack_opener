@@ -69,6 +69,7 @@ public:
     static void motionCallback(int x, int y);
     static void idleCallback();
 	static void mouseWheelCallback(int wheel, int direction, int x, int y);
+    static void specialCallback(int key, int x, int y);
 
     // --- Camera Accessors/Mutators ---
     float getCameraRadius() const { return cameraRadius; }
@@ -82,6 +83,7 @@ public:
     void setCameraElevation(float elevation) {
         cameraElevation = glm::clamp(elevation, minCameraElevation, maxCameraElevation);
     }
+    void regenerateCurrentCardOverlay();
 };
 
 // Global application instance

@@ -123,6 +123,7 @@ void Application::initialize(int argc, char** argv) {
     glutMotionFunc(motionCallback);
     glutIdleFunc(idleCallback);
     glutMouseWheelFunc(mouseWheelCallback);
+    glutSpecialFunc(specialCallback);
     // Initialize OpenGL states
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE); // Optional: Cull back faces
@@ -375,4 +376,36 @@ void Application::resetPack() {
         // inputHandler->resetMouseState(); // You would need to add this method if needed
     }
     // No explicit state change needed for CardPack here, generateCards sets it to CLOSED.
+}
+
+void Application::specialCallback(int key, int x, int y) {
+    if (application && application->inputHandler) {
+        application->inputHandler->handleSpecialKeyPress(key, x, y);
+    }
+}
+
+void Application::regenerateCurrentCardOverlay() {
+    if (!cardPack || !textureManager) {
+        std::cerr << "Error: Cannot regenerate overlay, CardPack or TextureManager missing." << std::endl;
+        return;
+    }
+    if (cardPack->getState() == REVEALING || cardPack->getState() == FINISHED) { // Only if cards are visible
+        int currentIdx = cardPack->getCurrentCardIndex(); // Need a getter in CardPack
+        if (currentIdx >= 0 && currentIdx < cardPack->getCards().size()) { // Need getCards() in CardPack
+            Card& currentCard = cardPack->getCards()[currentIdx]; // Need non-const access or a specific method
+
+            std::cout << "Regenerating overlay for card " << currentIdx
+                << " with variation level: " << textureManager->getLSystemVariationLevel() // Need getter
+                << std::endl;
+
+            // Regenerate (this handles caching internally, using the modified key)
+            GLuint newOverlayID = textureManager->generateProceduralOverlayTexture(currentCard);
+
+            // Update the card's overlay texture ID
+            currentCard.setOverlayTextureID(newOverlayID);
+
+            // Request redraw
+            glutPostRedisplay();
+        }
+    }
 }

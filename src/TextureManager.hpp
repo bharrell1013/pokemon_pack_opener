@@ -36,6 +36,7 @@ private:
 	GLuint cardBackTextureID = 0; // Texture ID for card back
 
     int shaderRenderMode = 0; // 0: Normal, 1: Overlay Only, 2: Base Only
+	int lsystemVariationLevel = 0; // L-System variation level for procedural textures
 
     // --- API Configuration ---
     const std::string apiKey = "56f39a72-5758-495c-ac18-134248507b5a";
@@ -72,7 +73,7 @@ public:
     // Generates card texture using API or fallbacks
     GLuint generateCardTexture(const Card& card);
     // Generates procedural overlay texture using L-Systems based on card properties
-    GLuint generateProceduralOverlayTexture(const Card& card);
+    GLuint generateProceduralOverlayTexture(Card& card);
     // Applies holographic effect (may use FBO in future)
     GLuint generateHoloEffect(GLuint baseTexture, const std::string& rarity);
 
@@ -86,6 +87,10 @@ public:
 
     void cycleShaderMode();
     int getShaderRenderMode() const;
+
+    void incrementLSystemVariationLevel() { lsystemVariationLevel++; }
+    void decrementLSystemVariationLevel() { lsystemVariationLevel = std::max(0, lsystemVariationLevel - 1); } // Prevent going below 0? Or allow negative?
+    int getLSystemVariationLevel() const { return lsystemVariationLevel; }
 
     // --- Shader State Getters ---
     GLuint getCurrentShader() const { return currentShader; }

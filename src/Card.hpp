@@ -17,6 +17,7 @@ private:
     std::string rarity;
     GLuint textureID = 0; // Initialize to 0 (invalid texture)
     GLuint overlayTextureID = 0; // Overlay texture (L-System)
+    int generatedOverlayLevel = -1; // Store the variation level used for the current overlayTextureID
     std::shared_ptr<Mesh> cardMesh;
     TextureManager* textureManager;
 
@@ -67,6 +68,7 @@ public:
     glm::vec3 getScale() const { return scale; }
     GLuint getTextureID() const { return textureID; }
     GLuint getOverlayTextureID() const { return overlayTextureID; };
+    int getGeneratedOverlayLevel() const { return generatedOverlayLevel; }
 
     // Setters
     void setPosition(const glm::vec3& pos);
@@ -75,6 +77,7 @@ public:
     void setVelocity(const glm::vec3& vel);
     void setTextureID(GLuint id);
     void setOverlayTextureID(GLuint id);
+    void setGeneratedOverlayLevel(int level);
 
 private:
     void initializeMesh();

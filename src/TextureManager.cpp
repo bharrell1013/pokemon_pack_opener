@@ -1100,10 +1100,10 @@ std::string TextureManager::getCacheFilename(const std::string& url) const {
     return ss.str();
 }
 
-GLuint TextureManager::generateProceduralOverlayTexture(const Card& card) {
+GLuint TextureManager::generateProceduralOverlayTexture(Card& card) {
     // --- 1. Generate Cache Key ---
     // Key based on unique card properties affecting the overlay
-    std::string cacheKey = "lsys_overlay_" + card.getRarity() + "_" + card.getPokemonType() + "_v3";
+    std::string cacheKey = "lsys_overlay_" + card.getRarity() + "_" + card.getPokemonType() + "_v3" + std::to_string(lsystemVariationLevel);
     // Optional: Add more factors like a version number if you change L-systems later
     // cacheKey += "_v1";
 
@@ -1132,6 +1132,7 @@ GLuint TextureManager::generateProceduralOverlayTexture(const Card& card) {
     float startAngle = 90.0f; // Start facing up
 	int numPasses = 1; // Default to 1 pass
     int lineThickness = 2; // Default thickness
+    int passIncrement = 5;
 
     std::string rarity = card.getRarity();
     std::string type = card.getPokemonType();
@@ -1154,23 +1155,24 @@ GLuint TextureManager::generateProceduralOverlayTexture(const Card& card) {
         // --- NEW: Random Start Angle & Multiple Passes ---
         numPasses = 15; // Set number of passes for normal
 		lineThickness = 1; // Set line thickness for normal
+        passIncrement = 3;
 
-        // Generate the L-System string ONCE if rules/iterations are fixed for all passes
-        std::string lsystemStringPass = lSystem.generate(iterations);
-        if (lsystemStringPass.empty()) { /* handle error, return 0 */ }
+        //// Generate the L-System string ONCE if rules/iterations are fixed for all passes
+        //std::string lsystemStringPass = lSystem.generate(iterations);
+        //if (lsystemStringPass.empty()) { /* handle error, return 0 */ }
 
-        for (int p = 0; p < numPasses; ++p) {
-            startPos = glm::vec2(glm::linearRand(texWidth * 0.1f, texWidth * 0.9f), // Widen start area
-                glm::linearRand(texHeight * 0.1f, texHeight * 0.9f));
-            startAngle = glm::linearRand(0.0f, 360.0f);
-            glm::vec3 passColor = startColor * glm::linearRand(0.7f, 1.0f);
+        //for (int p = 0; p < numPasses; ++p) {
+        //    startPos = glm::vec2(glm::linearRand(texWidth * 0.1f, texWidth * 0.9f), // Widen start area
+        //        glm::linearRand(texHeight * 0.1f, texHeight * 0.9f));
+        //    startAngle = glm::linearRand(0.0f, 360.0f);
+        //    glm::vec3 passColor = startColor * glm::linearRand(0.7f, 1.0f);
 
-            // Set parameters FOR THIS PASS
-            renderer.setParameters(step, angle, passColor, startPos, startAngle);
-            // Render THIS pass onto the existing buffer
-            renderer.render(lsystemStringPass); // Assumes render doesn't clear buffer
-        }
-        // --- End Multiple Passes ---
+        //    // Set parameters FOR THIS PASS
+        //    renderer.setParameters(step, angle, passColor, startPos, startAngle);
+        //    // Render THIS pass onto the existing buffer
+        //    renderer.render(lsystemStringPass); // Assumes render doesn't clear buffer
+        //}
+        //// --- End Multiple Passes ---
     }
     else if (rarity == "reverse" || rarity == "holo") {
         // Dense, overlapping, colored pattern for full coverage holo
@@ -1183,23 +1185,24 @@ GLuint TextureManager::generateProceduralOverlayTexture(const Card& card) {
         step = 2.0f; // Small steps for density
         numPasses = 30; // MANY passes from random points
         lineThickness = 2; // Standard thickness
+        passIncrement = 15;
 
         int typeIndex = getTypeValue(type);
         startColor = (typeIndex >= 0 && typeIndex < 12) ? (typeBasedHoloColors[typeIndex] * 0.7f + 0.3f) : glm::vec3(0.8f);
 
-        std::string lsystemStringPass = lSystem.generate(iterations);
-        if (lsystemStringPass.empty()) { /* error */ return 0; }
-        renderer.setLineThickness(lineThickness);
+        //std::string lsystemStringPass = lSystem.generate(iterations);
+        //if (lsystemStringPass.empty()) { /* error */ return 0; }
+        //renderer.setLineThickness(lineThickness);
 
-        for (int p = 0; p < numPasses; ++p) {
-            glm::vec2 startPos(glm::linearRand(0.0f, (float)texWidth),
-                glm::linearRand(0.0f, (float)texHeight));
-            float startAngle = glm::linearRand(0.0f, 360.0f);
-            // Vary color slightly per pass for more visual interest
-            glm::vec3 passColor = startColor * glm::linearRand(0.7f, 1.3f);
-            renderer.setParameters(step, angle, glm::clamp(passColor, 0.0f, 1.0f), startPos, startAngle);
-            renderer.render(lsystemStringPass);
-        }
+        //for (int p = 0; p < numPasses; ++p) {
+        //    glm::vec2 startPos(glm::linearRand(0.0f, (float)texWidth),
+        //        glm::linearRand(0.0f, (float)texHeight));
+        //    float startAngle = glm::linearRand(0.0f, 360.0f);
+        //    // Vary color slightly per pass for more visual interest
+        //    glm::vec3 passColor = startColor * glm::linearRand(0.7f, 1.3f);
+        //    renderer.setParameters(step, angle, glm::clamp(passColor, 0.0f, 1.0f), startPos, startAngle);
+        //    renderer.render(lsystemStringPass);
+        //}
 
     }
     else if (rarity == "ex" || rarity == "full art") {
@@ -1214,20 +1217,39 @@ GLuint TextureManager::generateProceduralOverlayTexture(const Card& card) {
         numPasses = 50; // LOTS of passes/starting points for random dots
         lineThickness = 2; // Make dots 2x2
         startColor = glm::vec3(1.0f); // Draw dots as white
+        passIncrement = 10;
 
-        std::string lsystemStringPass = lSystem.generate(iterations);
-        if (lsystemStringPass.empty()) { /* error */ return 0; }
-        renderer.setLineThickness(lineThickness);
+        //std::string lsystemStringPass = lSystem.generate(iterations);
+        //if (lsystemStringPass.empty()) { /* error */ return 0; }
+        //renderer.setLineThickness(lineThickness);
 
-        for (int p = 0; p < numPasses; ++p) {
-            glm::vec2 startPos(glm::linearRand(0.0f, (float)texWidth),
-                glm::linearRand(0.0f, (float)texHeight));
-            float startAngle = glm::linearRand(0.0f, 360.0f);
-            // Color is always white for sparkle map intensity
-            renderer.setParameters(step, angle, startColor, startPos, startAngle);
-            renderer.render(lsystemStringPass);
-        }
+        //for (int p = 0; p < numPasses; ++p) {
+        //    glm::vec2 startPos(glm::linearRand(0.0f, (float)texWidth),
+        //        glm::linearRand(0.0f, (float)texHeight));
+        //    float startAngle = glm::linearRand(0.0f, 360.0f);
+        //    // Color is always white for sparkle map intensity
+        //    renderer.setParameters(step, angle, startColor, startPos, startAngle);
+        //    renderer.render(lsystemStringPass);
+        //}
     }
+    int effectiveNumPasses = std::max(1, numPasses + lsystemVariationLevel * passIncrement); // Ensure at least 1 pass
+    // --- Generate L-System String ---
+    std::string lsystemStringPass = lSystem.generate(iterations); // Iterations usually fixed per rarity?
+    if (lsystemStringPass.empty()) { /* error */ return 0; }
+    renderer.setLineThickness(lineThickness);
+
+    // --- Render Multiple Passes (Using effectiveNumPasses) ---
+    std::cout << "[Overlay Gen] Rendering with " << effectiveNumPasses << " passes." << std::endl;
+    for (int p = 0; p < effectiveNumPasses; ++p) {
+        // Randomize startPos, startAngle, maybe passColor slightly per pass (as before)
+        startPos = glm::vec2(glm::linearRand(0.0f, (float)texWidth),
+            glm::linearRand(0.0f, (float)texHeight));
+        startAngle = glm::linearRand(0.0f, 360.0f);
+        glm::vec3 passColor = startColor * glm::linearRand(0.7f, 1.3f);
+        renderer.setParameters(step, angle, glm::clamp(passColor, 0.0f, 1.0f), startPos, startAngle);
+        renderer.render(lsystemStringPass); // Render this pass
+    }
+
         const std::vector<unsigned char>& overlayPixelData = renderer.getPixelData(); // Get data after all passes
         if (overlayPixelData.empty() || overlayPixelData.size() != static_cast<size_t>(texWidth) * texHeight * 4) {
             std::cerr << "Error: L-System rendering failed or produced invalid data for " << cacheKey << std::endl;
@@ -1272,6 +1294,7 @@ GLuint TextureManager::generateProceduralOverlayTexture(const Card& card) {
 
     // --- 8. Update Cache ---
     textureMap[cacheKey] = overlayTextureID;
+    card.setGeneratedOverlayLevel(lsystemVariationLevel);
     std::cout << "[Overlay Gen] Generated and cached texture ID " << overlayTextureID << " for: " << cacheKey << std::endl;
 
     return overlayTextureID;

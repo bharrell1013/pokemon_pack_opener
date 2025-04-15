@@ -121,3 +121,25 @@ void InputHandler::handleMouseWheel(int wheel, int direction, int x, int y) {
         glutPostRedisplay(); // Request redraw after zoom
     }
 }
+
+void InputHandler::handleSpecialKeyPress(int key, int x, int y) {
+    if (!application) return; // Need access to global application
+    TextureManager* tm = application->getApplicationTextureManager();
+    if (!tm) return;
+
+    switch (key) {
+    case GLUT_KEY_UP:
+        std::cout << "Up Arrow Pressed - Increasing L-System Variation" << std::endl;
+        tm->incrementLSystemVariationLevel(); // Implement this in TextureManager
+        application->regenerateCurrentCardOverlay(); // Trigger regeneration
+        break;
+    case GLUT_KEY_DOWN:
+        std::cout << "Down Arrow Pressed - Decreasing L-System Variation" << std::endl;
+        tm->decrementLSystemVariationLevel(); // Implement this in TextureManager
+        application->regenerateCurrentCardOverlay(); // Trigger regeneration
+        break;
+        // Handle other special keys if needed (F1, PageUp, etc.)
+    default:
+        break; // Ignore other special keys
+    }
+}

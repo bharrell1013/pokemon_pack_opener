@@ -438,6 +438,24 @@ void CardPack::cycleCard() {
     int prevFrontCardIdx = currentCardIndex;
     int newFrontCardIdx = (currentCardIndex + 1) % cards.size();
 
+    // *** CHECK AND REGENERATE OVERLAY FOR THE *NEW* FRONT CARD ***
+    Card& nextCard = cards[newFrontCardIdx];
+    int currentVariationLevel = textureManager->getLSystemVariationLevel();
+
+    if (nextCard.getGeneratedOverlayLevel() != currentVariationLevel) {
+        std::cout << "[Cycle Card] Overlay level mismatch for next card " << newFrontCardIdx
+            << " (Card: " << nextCard.getGeneratedOverlayLevel()
+            << ", Manager: " << currentVariationLevel << "). Regenerating..." << std::endl;
+
+        // Regenerate the overlay. This call will also update nextCard's internal level.
+        GLuint newOverlayID = textureManager->generateProceduralOverlayTexture(nextCard);
+
+        // Update the texture ID stored in the card object
+        nextCard.setOverlayTextureID(newOverlayID);
+        std::cout << "[Cycle Card] Regenerated Overlay ID: " << newOverlayID << std::endl;
+    }
+    // *** END OVERLAY CHECK/REGEN ***
+
     // --- 1. Start Stage 1 for the Card Moving FROM Front ---
     // Calculate the INTERMEDIATE position (offset to the side)
     // TUNABLE PARAMETERS: Adjust x, y, z offsets for desired path

@@ -59,6 +59,9 @@ public:
     void setPosition(float x, float y, float z);
     // Additional methods for interaction
     bool isPointInside(float x, float y) const;
+
+    int getCurrentCardIndex() const { return currentCardIndex; }
+    std::vector<Card>& getCards() { return cards; } // Return non-const ref (use carefully)
 };
 
 #endif

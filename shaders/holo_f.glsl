@@ -131,6 +131,40 @@ void main()
         finalColor += vec3(0.1) * lsystemEnhancement * holoIntensity;
     }
 
+    if (cardRarity >= 2) { // Apply only to Holo and rarer (Holo=2, EX=3, Full Art=4)
+            const float borderWidth = 0.04; // Tune this width (4% from edge)
+            const float borderFadeFactor = 0.7; // Start fade at 70% of border width from edge
+
+            // Calculate distance from the nearest edge (0 = edge, 0.5 = center)
+            vec2 borderDist = min(TexCoord, 1.0 - TexCoord);
+            // Find the minimum distance (how close are we to *any* edge?)
+            float minBorderDist = min(borderDist.x, borderDist.y);
+            // Create a mask: 1.0 at the very edge, fading to 0.0 inside the border width
+            // smoothstep(edge0, edge1, x): 0 if x < edge0, 1 if x > edge1, smooth in between
+            // We want 1 when minBorderDist is 0, and 0 when minBorderDist > borderWidth
+            // So, we use 1.0 - smoothstep(inner_edge, outer_edge, distance)
+            float borderMask = 1.0 - smoothstep(borderWidth * borderFadeFactor, borderWidth, minBorderDist);
+
+            if (borderMask > 0.0) { // Optimization: Only calculate effect if potentially visible on the border
+                // Calculate Rainbow Color (can reuse FA version or make a specific one)
+                vec2 borderRainbowUV = TexCoord * 2.5 + time * 0.35; // Faster/tighter pattern
+                float borderRainbowPhase = (borderRainbowUV.x + borderRainbowUV.y) * 5.0 + time * 1.5; // Faster phase shift
+                vec3 borderRainbow = vec3(0.6 + 0.4 * sin(borderRainbowPhase),              // Brighter base rainbow
+                                        0.6 + 0.4 * sin(borderRainbowPhase + 2.094),
+                                        0.6 + 0.4 * sin(borderRainbowPhase + 4.188));
+
+                // Combine rainbow and Fresnel for the border shine
+                // Mix factor favoring Fresnel slightly more for a glossier look
+                vec3 borderShine = borderRainbow * (0.4 + fresnel * 0.8);
+
+                // Apply the border shine additively, scaled by mask and intensity
+                // Use a separate intensity multiplier for the border to make it stand out
+                float borderIntensityMultiplier = 2.0; // Make border effect prominent
+                finalColor += borderShine * borderMask * holoIntensity * borderIntensityMultiplier;
+            }
+        }
+        // --- END BORDER EFFECT ---
+
     // --- Apply Render Mode ---
     if (renderMode == 1) { // Overlay Only
         FragColor = vec4(overlay.rgb, overlay.a);

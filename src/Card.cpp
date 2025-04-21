@@ -7,6 +7,7 @@
 #include <utility>                   // For std::move
 #include <stdexcept>                 // For std::runtime_error (optional)
 #include <cmath>                     // For std::abs, std::pow
+#include <glm/gtx/string_cast.hpp>
 #include "TextureManager.hpp"        // Include TextureManager header
 
 Card::Card(std::string name, std::string type, std::string rarity, TextureManager* texManager) :
@@ -223,161 +224,146 @@ void Card::update(float deltaTime) {
     }
 }
 
-// --- render ---
-void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPos) const {
+void Card::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPos, bool isFrontCard) const {
     // 1. --- Sanity Checks ---
-    if (!cardMesh) { std::cerr << "Error: Card::render - cardMesh is null for " << pokemonName << std::endl; return; }
-    if (!textureManager) { std::cerr << "Error: Card::render - textureManager is null for " << pokemonName << std::endl; return; }
-    // Check BOTH texture IDs now
-    if (textureID == 0) {
-         // std::cerr << "Warning: Card::render - Rendering '" << pokemonName << "' with BASE texture ID 0." << std::endl;
-    }
-     if (overlayTextureID == 0) {
-         // This is less critical, the card can render without overlay, but log maybe.
-         // std::cout << "Info: Card::render - Rendering '" << pokemonName << "' without overlay (Overlay ID 0)." << std::endl;
-     }
-     GLuint backTextureID = textureManager->getCardBackTextureID();
-     if (backTextureID == 0) {
-         std::cerr << "Warning: Card::render - Invalid Back Texture ID (0) for " << pokemonName << std::endl;
-         // Render will likely look wrong on the back face
-     }
+    if (!cardMesh || !textureManager) { /* ... */ return; }
+    if (textureID == 0) { /* ... */ }
+    if (overlayTextureID == 0) { /* ... */ }
+    GLuint backTextureID = textureManager->getCardBackTextureID();
+    if (backTextureID == 0) { /* ... */ }
 
     // 2. --- Get Active Shader ---
-    // This logic in CardPack::render or TextureManager::apply*Shader should remain the same.
-    // We just assume the correct shader (cardShader or holoShader) is already bound.
     GLuint currentShader = textureManager->getCurrentShader();
-    if (currentShader == 0) { /* ... error ... */ return; }
+    if (currentShader == 0) { /* ... */ return; }
 
-    // 3. --- Calculate Model Matrix --- (Remains the same)
+    // 3. --- Calculate Model Matrix ---
     glm::mat4 modelMatrix = glm::mat4(1.0f);
-    // ... (translate, rotate, scale using current position, rotation, scale) ...
     modelMatrix = glm::translate(modelMatrix, position);
     modelMatrix = glm::rotate(modelMatrix, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
     modelMatrix = glm::rotate(modelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
     modelMatrix = glm::rotate(modelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
     modelMatrix = glm::scale(modelMatrix, scale);
 
+    bool isHoloShader = (currentShader == textureManager->getHoloShaderID());
+
     // 4. --- Set Uniforms ---
-    // Get standard matrix uniform locations
     GLint modelLoc = glGetUniformLocation(currentShader, "model");
     GLint viewLoc = glGetUniformLocation(currentShader, "view");
     GLint projLoc = glGetUniformLocation(currentShader, "projection");
+    GLint baseTexSamplerLoc = glGetUniformLocation(currentShader, "baseTexture");
+    GLint overlayTexSamplerLoc = glGetUniformLocation(currentShader, "overlayTexture");
+    GLint backTexSamplerLoc = glGetUniformLocation(currentShader, "backTexture");
 
-    // *** Get Texture Sampler Locations ***
-    GLint baseTexSamplerLoc = glGetUniformLocation(currentShader, "baseTexture"); // Use new name
-    GLint overlayTexSamplerLoc = glGetUniformLocation(currentShader, "overlayTexture"); // Use new name
-	GLint backTexSamplerLoc = glGetUniformLocation(currentShader, "backTexture"); // For back face rendering
-
-    // Get other potential uniforms
-    GLint cardTypeLoc = glGetUniformLocation(currentShader, "cardType");
-    GLint cardRarityLoc = glGetUniformLocation(currentShader, "cardRarity");
-    GLint timeLoc = glGetUniformLocation(currentShader, "time"); // For holo shader
-    GLint holoIntensityLoc = glGetUniformLocation(currentShader, "holoIntensity"); // For holo shader
-    GLint overlayIntensityLoc = glGetUniformLocation(currentShader, "overlayIntensity"); // For card shader
-
-    GLint viewPosLoc = glGetUniformLocation(currentShader, "viewPos");
-
-    // Set matrix uniforms
+    // Set common matrix uniforms
     if (modelLoc != -1) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
     if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
     if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-    if (viewPosLoc != -1) {
-        glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
+
+    // --- Set Shader-Specific Uniforms ---
+    if (isHoloShader) {
+        // *** Set Holo Shader Uniforms HERE ***
+
+        // Set viewPos (using the dynamic cameraPos argument)
+        GLint vsViewPosLoc = glGetUniformLocation(currentShader, "viewPos");
+        if (vsViewPosLoc != -1) {
+            if (isFrontCard) {
+                //std::cout << "Card::render - Setting DYNAMIC viewPos uniform (Loc: " << vsViewPosLoc
+                //    << ", ShaderID: " << currentShader << ") to: ("
+                //    << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << ")" << std::endl;
+            }
+            glUniform3fv(vsViewPosLoc, 1, glm::value_ptr(cameraPos));
+            // Check error
+            GLenum err = glGetError(); if (err != GL_NO_ERROR && isFrontCard) { std::cerr << "OpenGL Error after setting viewPos: " << err << std::endl; }
+        }
+        else {
+            if (isFrontCard) { std::cerr << "ERROR: Uniform 'viewPos' not found in holo shader." << std::endl; }
+        }
+
+        // Set Normal Matrix
+        GLint normalMatrixLoc = glGetUniformLocation(currentShader, "normalMatrix");
+        if (normalMatrixLoc != -1) {
+            if (abs(glm::determinant(glm::mat3(modelMatrix))) > 0.0001f) {
+                glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(modelMatrix)));
+                glUniformMatrix3fv(normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+            }
+            else {
+                // Handle non-invertible matrix
+                glm::mat3 identityMatrix = glm::mat3(1.0f);
+                glUniformMatrix3fv(normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(identityMatrix));
+            }
+        }
+        else { /* Optional Warning */ }
+
+        // Set other holo uniforms (time, intensity, etc. - KEEP THESE COMMENTED OUT FOR THE TEST)
+        GLint cardTypeLoc = glGetUniformLocation(currentShader, "cardType");
+        // if (cardTypeLoc != -1) glUniform1i(cardTypeLoc, textureManager->getTypeValue(pokemonType)); // Keep commented/dummy for now
+
+        // ... (Keep holoIntensity, etc., commented out for position shift test)
+
+        GLint timeLoc = glGetUniformLocation(currentShader, "time"); // Keep commented out
+        // if (timeLoc != -1) {
+        //     float currentTime = static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f;
+        //     glUniform1f(timeLoc, currentTime);
+        // }
+        // GLint holoIntensityLoc = glGetUniformLocation(currentShader, "holoIntensity"); // Keep commented out
+        // if (holoIntensityLoc != -1) { ... }
+
+
+       // <<< REMOVED the problematic block that overwrote viewPos >>>
+
     }
-    else {
-         //Optional: Warn if viewPos uniform is missing, especially if using holo shader
-         //if (currentShader == textureManager->getHoloShaderID()) {
-         //    static bool viewPosWarned = false;
-         //    if (!viewPosWarned) {
-         //       std::cerr << "Warning: 'viewPos' uniform not found in active holo shader (ID: " << currentShader << ")" << std::endl;
-         //       viewPosWarned = true;
-         //    }
-         //}
+    else { // It's the standard Card Shader
+        GLint cardTypeLoc = glGetUniformLocation(currentShader, "cardType");
+        GLint cardRarityLoc = glGetUniformLocation(currentShader, "cardRarity");
+        GLint overlayIntensityLoc = glGetUniformLocation(currentShader, "overlayIntensity");
+
+        if (cardTypeLoc != -1) glUniform1i(cardTypeLoc, textureManager->getTypeValue(pokemonType));
+        if (cardRarityLoc != -1) glUniform1i(cardRarityLoc, textureManager->getRarityValue(rarity));
+        if (overlayIntensityLoc != -1) glUniform1f(overlayIntensityLoc, 0.15f);
     }
 
-    // *** Bind Textures to Units and Set Sampler Uniforms ***
-    // Bind Base Texture to Unit 0
+    // --- Bind Textures ---
+    // Unit 0: Base
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textureID); // Bind the base texture ID
-    if (baseTexSamplerLoc != -1) {
-        glUniform1i(baseTexSamplerLoc, 0); // Tell sampler uniform to use texture unit 0
-    } else {
-         // std::cerr << "Warning: 'baseTexture' uniform not found in shader " << currentShader << std::endl;
-    }
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    if (baseTexSamplerLoc != -1) glUniform1i(baseTexSamplerLoc, 0);
 
-    // Bind Overlay Texture to Unit 1 (only if valid)
+    // Unit 1: Overlay
     if (overlayTextureID != 0 && overlayTexSamplerLoc != -1) {
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, overlayTextureID); // Bind the overlay texture ID
-        glUniform1i(overlayTexSamplerLoc, 1); // Tell sampler uniform to use texture unit 1
-    } else {
-        // If overlay is missing or uniform doesn't exist, maybe bind a default texture (e.g., transparent pixel) to unit 1? Or ensure shader handles missing texture gracefully.
-        // For now, we just don't bind or set the uniform if ID is 0 or location is -1.
-        // The shader *must* handle the case where overlayTexture might not be properly sampled.
-         if (overlayTexSamplerLoc == -1 && overlayTextureID != 0) {
-             // std::cerr << "Warning: 'overlayTexture' uniform not found in shader " << currentShader << std::endl;
-         }
+        glBindTexture(GL_TEXTURE_2D, overlayTextureID);
+        glUniform1i(overlayTexSamplerLoc, 1);
     }
 
-    // --- Unit 2: Back Texture ---
+    // Unit 2: Back
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, backTextureID); // Bind the loaded back texture ID
-    if (backTexSamplerLoc != -1) {
-        glUniform1i(backTexSamplerLoc, 2); // Tell sampler uniform to use texture unit 2
-    }
-    else {
-        // Warn if sampler is missing, as back face won't render correctly
-        static bool backWarned = false;
-        if (!backWarned && backTextureID != 0) {
-            std::cerr << "Warning: 'backTexture' uniform sampler not found in shader " << currentShader << std::endl;
-            backWarned = true;
-        }
-    }
+    glBindTexture(GL_TEXTURE_2D, backTextureID);
+    if (backTexSamplerLoc != -1) glUniform1i(backTexSamplerLoc, 2);
 
-    // Set other uniforms based on which shader is active
-    if (currentShader == textureManager->getCardShaderID()) { // Check if it's the normal card shader
-         if (cardTypeLoc != -1) glUniform1i(cardTypeLoc, textureManager->getTypeValue(pokemonType));
-         if (cardRarityLoc != -1) glUniform1i(cardRarityLoc, textureManager->getRarityValue(rarity));
-         if (overlayIntensityLoc != -1) glUniform1f(overlayIntensityLoc, 0.15f); // Set default intensity or make it configurable
-
-    } else if (currentShader == textureManager->getHoloShaderID()) { // Check if it's the holo shader
-         if (cardTypeLoc != -1) glUniform1i(cardTypeLoc, textureManager->getTypeValue(pokemonType));
-         if (cardRarityLoc != -1) glUniform1i(cardRarityLoc, textureManager->getRarityValue(rarity)); // Pass rarity
-         if (timeLoc != -1) {
-             // Ensure glut is initialized if using this!
-             float currentTime = static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f;
-             glUniform1f(timeLoc, currentTime);
-         }
-         if (holoIntensityLoc != -1) {
-             // Set holo intensity based on rarity maybe?
-             float intensity = 0.5f; // Default
-             if (rarity == "holo") intensity = 0.6f;
-             else if (rarity == "reverse") intensity = 0.4f;
-             else if (rarity == "ex") intensity = 0.7f;
-             else if (rarity == "full art") intensity = 0.8f;
-             glUniform1f(holoIntensityLoc, intensity);
-         }
-          // Holo shader might also need viewPos, lightPos etc. if doing lighting
-          GLint viewPosLoc = glGetUniformLocation(currentShader, "viewPos");
-          if (viewPosLoc != -1) {
-              // Need camera position (pass it to Card::render or get from a global state)
-              // Example: Hardcoded for now, replace with actual camera position
-              glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 6.0f);
-              glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
-          }
+    // --- Bind other textures for Holo Shader (Units 3, 4) ---
+    // (This part should technically be inside the if(isHoloShader) block,
+    // but leaving it here might be okay if the non-holo shader ignores them.
+    // Moving them inside is cleaner.)
+    /*
+    if (isHoloShader) {
+        GLint rainbowGradLoc = ...;
+        if (rainbowGradLoc != -1) { ... bind rainbow tex ... }
+        GLint normalMapLoc = ...;
+        if (normalMapLoc != -1) { ... bind normal map tex ... }
     }
+    */
 
-    // 5. --- Draw the Mesh --- (Remains the same)
+    // 5. --- Draw the Mesh ---
     cardMesh->draw();
 
     // 6. --- Clean up ---
-    // Unbind textures from units (good practice)
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, 0);
+    // Unbind units 3 and 4 if they were bound
+    // glActiveTexture(GL_TEXTURE3); glBindTexture(GL_TEXTURE_1D, 0);
+    // glActiveTexture(GL_TEXTURE4); glBindTexture(GL_TEXTURE_2D, 0);
+    // glActiveTexture(GL_TEXTURE0); // Reset
 }
 
 // --- initializeMesh ---
@@ -397,11 +383,11 @@ void Card::initializeMesh() {
     // Ensure winding order and normals are correct for backface culling if enabled.
     // Normals point towards +Z if the card initially faces the camera along the -Z axis.
     std::vector<float> vertices = {
-        // Position          Texture Coords    Normal
-        -w, -h, 0.0f,        0.0f, 0.0f,       0.0f, 0.0f, 1.0f, // Bottom Left
-         w, -h, 0.0f,        1.0f, 0.0f,       0.0f, 0.0f, 1.0f, // Bottom Right
-         w,  h, 0.0f,        1.0f, 1.0f,       0.0f, 0.0f, 1.0f, // Top Right
-        -w,  h, 0.0f,        0.0f, 1.0f,       0.0f, 0.0f, 1.0f  // Top Left
+        // Position          Tex Coords    Normal             Tangent            Bitangent
+        -w, -h, 0.0f,        0.0f, 0.0f,   0.0f, 0.0f, 1.0f,   1.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f, // Bottom Left
+         w, -h, 0.0f,        1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   1.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f, // Bottom Right
+         w,  h, 0.0f,        1.0f, 1.0f,   0.0f, 0.0f, 1.0f,   1.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f, // Top Right
+        -w,  h, 0.0f,        0.0f, 1.0f,   0.0f, 0.0f, 1.0f,   1.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f  // Top Left
     };
 
     // Define indices for two triangles forming the quad

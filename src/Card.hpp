@@ -53,7 +53,7 @@ public:
     Card(Card&& other) noexcept;
     Card& operator=(Card&& other) noexcept;
 
-    void render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPos) const;
+    void render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const glm::vec3& cameraPos, bool isFrontCard = false) const;
     void update(float deltaTime);
 
     void setTargetTransform(const glm::vec3& pos, const glm::vec3& rot, const glm::vec3& scl);

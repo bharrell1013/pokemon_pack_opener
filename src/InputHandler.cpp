@@ -46,7 +46,21 @@ void InputHandler::handleKeyPress(unsigned char key, int x, int y) {
         if (application) {
             TextureManager* tm = application->getApplicationTextureManager();
             if (tm) {
-                tm->cycleShaderMode();
+                // Let's handle it here for simplicity:
+                static int holoDebugMode = 0;
+                holoDebugMode = (holoDebugMode + 1) % 8; // Cycle 0-7
+                tm->setHoloDebugMode(holoDebugMode); // Assuming this exists now
+
+                std::cout << "Holo Debug Mode: ";
+                if (holoDebugMode == 0) std::cout << "Final Holo" << std::endl;
+                else if (holoDebugMode == 1) std::cout << "Iridescence" << std::endl;
+                else if (holoDebugMode == 2) std::cout << "Anisotropy" << std::endl;
+                else if (holoDebugMode == 3) std::cout << "Fresnel Factor" << std::endl;
+                else if (holoDebugMode == 4) std::cout << "Base Texture" << std::endl;
+                else if (holoDebugMode == 5) std::cout << "Overlay Texture" << std::endl;
+                else if (holoDebugMode == 6) std::cout << "World Normal (Mapped)" << std::endl;
+                else if (holoDebugMode == 7) std::cout << "Parallax Coords" << std::endl;
+
             }
             else {
                 std::cerr << "Error: TextureManager instance not available via Application." << std::endl;
@@ -139,6 +153,18 @@ void InputHandler::handleSpecialKeyPress(int key, int x, int y) {
         application->regenerateCurrentCardOverlay(); // Trigger regeneration
         break;
         // Handle other special keys if needed (F1, PageUp, etc.)
+    case GLUT_KEY_LEFT:
+        std::cout << "Left Arrow Pressed - Decreasing Shift" << std::endl;
+        // tm->setTestShift(currentShift - 0.05f); // Need getter/setter or modify directly
+        // Let's modify directly for now (requires making testHorizontalShift public or having a modify function)
+        // OR pass the amount to change:
+        tm->setTestShift(tm->getTestShift() - 0.05f); // Need getter getTestShift() in TM
+        break;
+    case GLUT_KEY_RIGHT:
+        std::cout << "Right Arrow Pressed - Increasing Shift" << std::endl;
+        tm->setTestShift(tm->getTestShift() + 0.05f); // Need getter getTestShift() in TM
+        break;
+        // ... (handle Up/Down for L-System as before, or disable temporarily) ...
     default:
         break; // Ignore other special keys
     }

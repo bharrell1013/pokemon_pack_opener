@@ -20,6 +20,7 @@ using json = nlohmann::json; // Alias for convenience
 // Define the necessary headers for image loading
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include <glm/gtc/type_ptr.hpp>
 
 TextureManager::TextureManager() : cardShader(0), holoShader(0), currentShader(0), cardBackTextureID(0) {
     // Ensure OpenGL context is available before initializing shaders
@@ -841,12 +842,44 @@ void TextureManager::applyHoloShader(const Card& card, float time) {
     currentShader = holoShader;
     glUseProgram(holoShader);
 
+    // Determine if it's a holo card (adjust rarity values as needed)
+    int rarityValue = getRarityValue(card.getRarity());
+    bool isHoloType = (rarityValue >= 1); // Treat Reverse Holo and up as "holo"
+
+    GLint modeLoc = glGetUniformLocation(holoShader, "renderMode");
+    if (modeLoc == -1) {
+        // Ensure this warning is active and not commented out
+        static bool warnedMode = false;
+        if (!warnedMode) {
+            std::cerr << "FATAL WARNING: Uniform 'renderMode' not found in holo shader (ID: " << holoShader << "). Mode switching will FAIL." << std::endl;
+            warnedMode = true;
+        }
+    }
+    else {
+        glUniform1i(modeLoc, holoDebugRenderMode);
+
+        // *** Add Error Check ***
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR) {
+            std::cerr << "OpenGL Error *after* setting renderMode uniform: " << err << std::endl;
+        }
+    }
+
     // Check for GL errors after glUseProgram
     GLenum err = glGetError();
     if (err != GL_NO_ERROR) {
         std::cerr << "OpenGL Error after glUseProgram(holoShader=" << holoShader << "): " << err << std::endl;
         // Potentially return or handle error
     }
+
+    // *** Set ONLY the horizontalShift uniform ***
+    //GLint shiftLoc = glGetUniformLocation(holoShader, "horizontalShift");
+    //if (shiftLoc != -1) {
+    //    glUniform1f(shiftLoc, testHorizontalShift); // Use the member variable
+    //}
+    //else {
+    //    std::cerr << "Warning: Uniform 'horizontalShift' not found in holo shader." << std::endl;
+    //}
 
     // Set time uniform for animated effects
     GLint timeLoc = glGetUniformLocation(holoShader, "time");
@@ -857,17 +890,32 @@ void TextureManager::applyHoloShader(const Card& card, float time) {
         glUniform1f(timeLoc, time);
     }
 
+    // Pass cardRarity - CRUCIAL for conditional logic in shader
+    GLint rarityLoc = glGetUniformLocation(holoShader, "cardRarity");
+    if (rarityLoc != -1) {
+        glUniform1i(rarityLoc, getRarityValue(card.getRarity())); // Pass the numeric rarity value
+    }
+    else { /* Warn */ }
+
+    GLint lightDirLoc = glGetUniformLocation(holoShader, "lightDir");
+    if (lightDirLoc != -1) {
+        // Example light direction - make this configurable maybe
+        glm::vec3 lightDirection = glm::normalize(glm::vec3(0.5f, 1.0f, 0.8f));
+        glUniform3fv(lightDirLoc, 1, glm::value_ptr(lightDirection));
+    }
+
+
 
     // Set other holo effect parameters
-    GLint intensityLoc = glGetUniformLocation(holoShader, "holoIntensity");
-    GLint typeLoc = glGetUniformLocation(holoShader, "cardType");
+    //GLint intensityLoc = glGetUniformLocation(holoShader, "holoIntensity");
+    //GLint typeLoc = glGetUniformLocation(holoShader, "cardType");
 
-    if (intensityLoc == -1) {
-        std::cerr << "Warning: Uniform 'holoIntensity' not found in holo shader (ID: " << holoShader << ")" << std::endl;
-    }
-    if (typeLoc == -1) {
-        std::cerr << "Warning: Uniform 'cardType' not found in holo shader (ID: " << holoShader << ")" << std::endl;
-    }
+    //if (intensityLoc == -1) {
+    //    std::cerr << "Warning: Uniform 'holoIntensity' not found in holo shader (ID: " << holoShader << ")" << std::endl;
+    //}
+    //if (typeLoc == -1) {
+    //    std::cerr << "Warning: Uniform 'cardType' not found in holo shader (ID: " << holoShader << ")" << std::endl;
+    //}
 
 
     float intensity = 1.0f;
@@ -876,24 +924,57 @@ void TextureManager::applyHoloShader(const Card& card, float time) {
     else if (card.getRarity() == "ex") intensity = 2.0f;
     else if (card.getRarity() == "full art") intensity = 2.5f;
 
-    if (intensityLoc != -1) {
-        glUniform1f(intensityLoc, intensity);
-    }
-    if (typeLoc != -1) {
-        glUniform1i(typeLoc, getTypeValue(card.getPokemonType()));
-    }
+    //if (intensityLoc != -1) {
+    //    glUniform1f(intensityLoc, intensity);
+    //}
+    //if (typeLoc != -1) {
+    //    glUniform1i(typeLoc, getTypeValue(card.getPokemonType()));
+    //}
 
-    GLint modeLoc = glGetUniformLocation(holoShader, "renderMode");
-    if (modeLoc != -1) {
-        glUniform1i(modeLoc, shaderRenderMode); // Pass the current mode
+    //GLint modeLoc = glGetUniformLocation(holoShader, "renderMode");
+    //if (modeLoc != -1) {
+    //    glUniform1i(modeLoc, shaderRenderMode); // Pass the current mode
+    //}
+    //else {
+    //    static bool warned = false;
+    //    if (!warned) {
+    //        std::cerr << "Warning: Uniform 'renderMode' not found in holo shader (ID: " << holoShader << ")" << std::endl;
+    //        warned = true;
+    //    }
+    //}
+
+    // Bind Rainbow Gradient (Unit 3)
+    GLint rainbowGradLoc = glGetUniformLocation(holoShader, "rainbowGradient");
+    if (rainbowGradLoc != -1) {
+        glActiveTexture(GL_TEXTURE3); // Activate texture unit 3
+        glBindTexture(GL_TEXTURE_1D, rainbowGradientTextureID); // Bind the generated texture
+        glUniform1i(rainbowGradLoc, 3); // Tell sampler to use unit 3
     }
     else {
-        static bool warned = false;
-        if (!warned) {
-            std::cerr << "Warning: Uniform 'renderMode' not found in holo shader (ID: " << holoShader << ")" << std::endl;
-            warned = true;
-        }
+        std::cerr << "Warning: Uniform 'rainbowGradient' sampler not found in holo shader." << std::endl;
     }
+
+    // Bind Normal/Height Map (Unit 4)
+    GLint normalMapLoc = glGetUniformLocation(holoShader, "normalMap");
+    if (normalMapLoc != -1) {
+        glActiveTexture(GL_TEXTURE4); // Activate texture unit 4
+        glBindTexture(GL_TEXTURE_2D, holoNormalMapTextureID); // Bind the loaded texture
+        glUniform1i(normalMapLoc, 4); // Tell sampler to use unit 4
+    }
+    else {
+        std::cerr << "Warning: Uniform 'normalMap' sampler not found in holo shader." << std::endl;
+    }
+
+    // --- Set New Uniforms (Optional for Phase 2 test, but good practice) ---
+     //Get locations now, even if we don't set meaningful values yet.
+
+    GLint parallaxScaleLoc = glGetUniformLocation(holoShader, "parallaxHeightScale");
+     if (parallaxScaleLoc != -1) glUniform1f(parallaxScaleLoc, 0.03f); // Set default
+
+    GLint anisoDirLoc = glGetUniformLocation(holoShader, "anisotropyDirection");
+     if (anisoDirLoc != -1) glUniform2f(anisoDirLoc, 1.0f, 0.0f); // Set default
+
+    glActiveTexture(GL_TEXTURE0);
 
     // Check for GL errors after setting uniforms
     err = glGetError();
@@ -932,6 +1013,74 @@ void TextureManager::initializeShaders() {
     std::cout << "[DEBUG] TextureManager::initializeShaders() - this: " << this
         << ", cardShader ID: " << cardShader
         << ", holoShader ID: " << holoShader << std::endl;
+    // --- Generate 1D Rainbow Gradient Texture ---
+    std::cout << "Generating 1D Rainbow Gradient Texture..." << std::endl;
+    const int gradientWidth = 256;
+    std::vector<unsigned char> gradientData(gradientWidth * 3); // RGB format
+    for (int i = 0; i < gradientWidth; ++i) {
+        float hue = (float)i / (float)(gradientWidth - 1); // Ensure reaches 1.0
+        // Simple HSV to RGB (Sat=1, Val=1)
+        float r, g, b;
+        float h = hue * 6.0f;
+        int sector = floor(h);
+        float f = h - sector;
+        float p = 0.0f; float q = 1.0f - f; float t = f;
+        switch (sector) {
+        case 0: r = 1; g = t; b = p; break; case 1: r = q; g = 1; b = p; break;
+        case 2: r = p; g = 1; b = t; break; case 3: r = p; g = q; b = 1; break;
+        case 4: r = t; g = p; b = 1; break; default:r = 1; g = p; b = q; break;
+        }
+        gradientData[i * 3 + 0] = static_cast<unsigned char>(r * 255.0f);
+        gradientData[i * 3 + 1] = static_cast<unsigned char>(g * 255.0f);
+        gradientData[i * 3 + 2] = static_cast<unsigned char>(b * 255.0f);
+    }
+
+    // --- Generate Texture Object ---
+    glGenTextures(1, &rainbowGradientTextureID);
+    if (rainbowGradientTextureID == 0) {
+        std::cerr << "Error: Failed to generate Rainbow Gradient Texture ID." << std::endl;
+    }
+    else {
+        glBindTexture(GL_TEXTURE_1D, rainbowGradientTextureID);
+        // Set alignment for 1D RGB data (3 bytes per pixel)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // Important for non-multiple-of-4 row sizes (though less critical for 1D)
+        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB, gradientWidth, 0, GL_RGB, GL_UNSIGNED_BYTE, gradientData.data());
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4); // Reset to default
+
+        // Set texture parameters
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Repeat or Clamp? Repeat often better for shifting effects.
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindTexture(GL_TEXTURE_1D, 0);
+
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR) {
+            std::cerr << "OpenGL Error after generating Rainbow Gradient Texture: " << err << std::endl;
+        }
+        else {
+            std::cout << "Successfully generated 1D Rainbow Gradient Texture. ID: " << rainbowGradientTextureID << std::endl;
+        }
+    }
+    // --- End Rainbow Gradient ---
+    // --- Load Normal Map (with Height in Alpha) ---
+    std::string normalMapPath = "textures/cards/NormalMap.png"; // <<< Make sure this file exists!
+    std::cout << "Loading Holo Normal/Height Map: " << normalMapPath << std::endl;
+    holoNormalMapTextureID = loadTexture(normalMapPath); // Use existing loader
+
+    if (holoNormalMapTextureID == 0) {
+        std::cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+        std::cerr << "!!! ERROR: Failed to load holo normal map texture: " << normalMapPath << std::endl;
+        std::cerr << "!!! Parallax and Normal Mapping effects will likely fail." << std::endl;
+        std::cerr << "!!! Ensure the file exists and is a valid RGBA image." << std::endl;
+        std::cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+        // Consider loading a flat placeholder if loading fails, e.g.:
+        // holoNormalMapTextureID = loadTexture("textures/flat_normal_placeholder.png");
+    }
+    else {
+        std::cout << "Successfully loaded Holo Normal/Height Map. ID: " << holoNormalMapTextureID << std::endl;
+        // Note: loadTexture already adds it to textureMap cache if needed
+    }
+    // --- End Normal Map ---
 }
 
 

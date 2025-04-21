@@ -224,18 +224,29 @@ void Mesh::initialize(const std::vector<float>& vertexData, const std::vector<un
     glBindBuffer(GL_ARRAY_BUFFER, vbuf);
     glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_STATIC_DRAW);
 
-    // Set up vertex attributes
-    // Position (3 floats)
+    // Calculate stride (total floats per vertex * size of float)
+    const GLsizei stride = 14 * sizeof(float);
+
+    // Set up vertex attributes (LOCATION MATTERS!)
+// Position (Location 0) - 3 floats
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
 
-    // Texture coordinates (2 floats)
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    // Texture coordinates (Location 1) - 2 floats
+    glEnableVertexAttribArray(1); // <<< LOCATION is now 1
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float))); // Offset = 3 floats
 
-    // Normals (3 floats)
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+    // Normals (Location 2) - 3 floats
+    glEnableVertexAttribArray(2); // <<< LOCATION is now 2
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, (void*)(5 * sizeof(float))); // Offset = 3+2 = 5 floats
+
+    // Tangent (Location 3) - 3 floats <<< NEW
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, stride, (void*)(8 * sizeof(float))); // Offset = 3+2+3 = 8 floats
+
+    // Bitangent (Location 4) - 3 floats <<< NEW
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void*)(11 * sizeof(float))); // Offset = 3+2+3+3 = 11 floats
 
     // If indices are provided, create and bind element buffer
     if (!indices.empty()) {
@@ -252,7 +263,9 @@ void Mesh::initialize(const std::vector<float>& vertexData, const std::vector<un
     // Unbind VAO and buffers
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    if (ebo != 0) { // Check if ebo was actually created
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
 }
 
 // Release resources

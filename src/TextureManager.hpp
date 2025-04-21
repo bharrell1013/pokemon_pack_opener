@@ -55,6 +55,12 @@ private:
 
     std::string getCacheFilename(const std::string& url) const;
 
+    int holoDebugRenderMode = 0;
+    GLuint rainbowGradientTextureID = 0;
+    GLuint holoNormalMapTextureID = 0;
+
+    float testHorizontalShift = 0.0f;
+
 public:
     TextureManager();
     ~TextureManager();
@@ -97,6 +103,10 @@ public:
     GLuint getCardShaderID() const { return cardShader; }
     GLuint getHoloShaderID() const { return holoShader; }
     GLuint getCardBackTextureID() const { return cardBackTextureID; }
+
+    void setHoloDebugMode(int mode) { holoDebugRenderMode = mode % 8; }
+    void setTestShift(float shift) { testHorizontalShift = shift; }
+    float getTestShift() const { return testHorizontalShift; }
 };
 
 #endif

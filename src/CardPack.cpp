@@ -234,45 +234,28 @@ void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, c
         currentTime = static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f;
 
         // Iterate through cards and render them
-        for (const auto& card : cards) {
+        for (size_t i = 0; i < cards.size(); ++i) {
+            const auto& card = cards[i];
+            bool isFrontCard = (i == currentCardIndex) && (state == REVEALING);
             // Determine if holo shader should be used based on rarity
             bool useHolo = (card.getRarity() == "holo" || card.getRarity() == "reverse" || card.getRarity() == "ex" || card.getRarity() == "full art");
             bool shaderApplied = false; // Flag to track if a valid shader was applied
 
-            if (useHolo) {
-                // Check if the holo shader ID is valid BEFORE applying
-                if (textureManager->getHoloShaderID() != 0) {
-                    textureManager->applyHoloShader(card, currentTime);
-                    shaderApplied = true;
-                } else {
-                    // Log error if holo shader is needed but invalid
-                    static bool holoErrorLogged = false;
-                    if (!holoErrorLogged) {
-                        std::cerr << "Error: Holo shader ID is 0 in CardPack::render. Holo cards may not render effects." << std::endl;
-                        holoErrorLogged = true;
-                    }
-                    // Fallback: Try applying the regular card shader? Or render plain?
-                    // For now, we just won't apply a *valid* shader if holo is missing.
-                     if (textureManager->getCardShaderID() != 0) {
-                          textureManager->applyCardShader(card); // Use card shader as fallback
-                          shaderApplied = true; // Mark that *a* shader was applied
-                     }
+            // <<< ALWAYS Use Holo Shader Pipeline for All Cards >>>
+            if (textureManager->getHoloShaderID() != 0) {
+                // ApplyHoloShader sets the uniforms based on rarity internally now (implicitly)
+                // It also calls glUseProgram(holoShaderID)
+                textureManager->applyHoloShader(card, currentTime);
+                shaderApplied = true;
+            }
+            else {
+                // Log error if holo shader is invalid
+                static bool holoErrorLogged = false;
+                if (!holoErrorLogged) {
+                    std::cerr << "Error: Holo shader ID is 0 in CardPack::render. Cards cannot be rendered correctly." << std::endl;
+                    holoErrorLogged = true;
                 }
-            } else {
-                // Use the regular card shader
-                 // Check if the card shader ID is valid BEFORE applying
-                if (textureManager->getCardShaderID() != 0) {
-                    textureManager->applyCardShader(card);
-                    shaderApplied = true;
-                } else {
-                    // Log error if card shader is needed but invalid
-                    static bool cardErrorLogged = false;
-                     if (!cardErrorLogged) {
-                         std::cerr << "Error: Card shader ID is 0 in CardPack::render. Non-holo cards may not render correctly." << std::endl;
-                         cardErrorLogged = true;
-                     }
-                    // No valid shader available for this card
-                }
+                // Maybe break or return if shader is essential and missing?
             }
 
             // Only render the card if a shader could be successfully applied
@@ -280,7 +263,7 @@ void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, c
             if (shaderApplied && card.getTextureID() != 0) { // Added check for card's texture ID
                 // The Card::render function needs the view and projection matrices
                 // It will handle its own model matrix based on its position/rotation/scale
-                card.render(viewMatrix, projectionMatrix, cameraPos);
+                card.render(viewMatrix, projectionMatrix, cameraPos, isFrontCard);
             } else {
                 if (!shaderApplied) {
                     // std::cerr << "Skipping render for " << card.getPokemonName() << " due to invalid or missing shader." << std::endl;

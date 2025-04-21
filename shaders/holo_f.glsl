@@ -29,6 +29,10 @@ uniform int renderMode = 0; // Debug Mode
 // Overall Holo Strength
 const float holoIntensity = 0.8;
 
+// L-System Overlay Blending (For ALL cards)
+const float overlayBlendIntensity = 0.4; // <<< How strongly overlay RGB blends with base (0=none, 1=fully opaque)
+const vec3 overlayGreyColor = vec3(0.7); // <<< Grey color to blend
+
 // Normal/Parallax Control (Subtle base effect for ALL cards)
 const float normalMapStrength = 0.05; // Subtle texture effect
 const float parallaxHeightScale = 0.01; // Very subtle depth
@@ -129,6 +133,10 @@ void main()
     float fresnelNonHolo = pow(1.0 - dotNV, baseFresnelPower);
     litBaseColor += vec3(0.8, 0.9, 1.0) * fresnelNonHolo * baseFresnelIntensityNonHolo;
 
+    // Mix between the lit base and a fixed grey color, using the overlay's alpha
+    // and blend intensity to control how much grey pattern shows through.
+    vec3 baseWithOverlay = mix(litBaseColor, overlayGreyColor, l_systemMask * overlayBlendIntensity);
+
 
     // --- Initialize Holo Effects ---
     vec3 appliedSpecular = vec3(0.0);         // CALCULATED IF RARITY >= 1
@@ -181,7 +189,7 @@ void main()
 
     // --- Final Combination ---
     // holoIntensity acts as master switch/scaler (still useful uniform maybe?)
-    vec3 finalColor = litBaseColor + holoLayer * holoIntensity;
+    vec3 finalColor = baseWithOverlay + holoLayer * holoIntensity;
 
     // Dummy usage for cardType
     //finalColor.r += float(cardType) * 0.0000001;
@@ -192,7 +200,7 @@ void main()
      if (renderMode == 1) debugColor = appliedIridescenceColor * l_systemMask;
      else if (renderMode == 2) debugColor = appliedSpecular;
      else if (renderMode == 3) debugColor = calculatedBorderColor + appliedFresnel * l_systemMask; // Show border + masked fresnel
-     else if (renderMode == 4) debugColor = litBaseColor;
+     else if (renderMode == 4) debugColor = baseWithOverlay;
      else if (renderMode == 5) { debugColor = overlay.rgb; debugAlpha = overlay.a; }
      else if (renderMode == 6) debugColor = N_final_base * 0.5 + 0.5;
      else if (renderMode == 7) debugColor = vec3(dotNV);

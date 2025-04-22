@@ -42,6 +42,8 @@ public:
 	// Local geometry data
 	std::vector<Vertex> vertices;
 
+	bool loadGltf(const std::string& filename, bool keepLocalGeometry = false); // Load GLTF file
+
 protected:
 	void release();		// Release OpenGL resources
 

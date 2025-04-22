@@ -120,7 +120,7 @@ void InputHandler::handleMouseWheel(int wheel, int direction, int x, int y) {
     if (!application || !packPtr) return;
 
     // Only allow zooming when cards are revealed
-    if (packPtr->getState() != CLOSED) {
+    //if (packPtr->getState() != CLOSED) {
         float currentRadius = application->getCameraRadius();
         float zoomSpeed = 0.5f; // Adjust sensitivity
 
@@ -133,7 +133,7 @@ void InputHandler::handleMouseWheel(int wheel, int direction, int x, int y) {
             // std::cout << "Zoom Out (Wheel). New Radius: " << application->getCameraRadius() << std::endl;
         }
         glutPostRedisplay(); // Request redraw after zoom
-    }
+    //}
 }
 
 void InputHandler::handleSpecialKeyPress(int key, int x, int y) {

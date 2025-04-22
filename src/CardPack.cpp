@@ -29,40 +29,26 @@ CardPack::CardPack(TextureManager* texManager) :
     frontPosition = glm::vec3(0.0f, 0.0f, stackCenter.z + stackSpacing * 3.0f);
 
     std::cout << "CardPack constructor: Attempting to load pack model..." << std::endl;
-    std::string packModelPath = "models/pack.obj";
-    std::string fallbackModelPath = "models/cube.obj"; // Fallback if pack fails
+    std::string packModelPath = "models/pack.glb";
+    std::string fallbackModelPath = "models/pack.obj"; // Fallback if pack fails
 
-    // Try loading the primary pack model first
-     if (std::filesystem::exists(packModelPath)) {
-        try {
-            packModel = std::make_unique<Mesh>(packModelPath);
-            std::cout << "Loaded primary pack model: " << packModelPath << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "Failed to load primary pack model '" << packModelPath << "': " << e.what() << std::endl;
-            packModel = nullptr; // Ensure it's null if primary failed
-        }
-    } else {
-        std::cerr << "Primary pack model not found at: " << packModelPath << std::endl;
-         std::cerr << "Searched relative to working directory: " << std::filesystem::current_path() << std::endl;
-    }
-
-    // If primary model failed or wasn't found, try the fallback
-    if (!packModel) {
-        std::cerr << "Attempting to load fallback model: " << fallbackModelPath << std::endl;
+    packModel = std::make_unique<Mesh>(); // Create empty mesh first
+    if (!packModel->loadGltf(packModelPath)) {
+        // Handle error - try fallback or throw
+        std::cerr << "Failed to load primary pack model: " << packModelPath << std::endl;
         if (std::filesystem::exists(fallbackModelPath)) {
+            std::cerr << "Attempting fallback OBJ: " << fallbackModelPath << std::endl;
+            // Need to decide how to handle fallback - load OBJ into the same mesh object?
             try {
-                packModel = std::make_unique<Mesh>(fallbackModelPath);
-                std::cout << "Loaded fallback model: " << fallbackModelPath << std::endl;
-            } catch (const std::exception& e) {
-                std::cerr << "Failed to load fallback model '" << fallbackModelPath << "': " << e.what() << std::endl;
-                packModel = nullptr; // Explicitly null
-                throw std::runtime_error("Failed to load any pack model (pack.obj or cube.obj).");
+                packModel->load(fallbackModelPath); // Use old OBJ loader for fallback
+                std::cout << "Loaded fallback OBJ model: " << fallbackModelPath << std::endl;
             }
-        } else {
-            std::cerr << "Fallback model also not found at: " << fallbackModelPath << std::endl;
-            std::cerr << "Searched relative to working directory: " << std::filesystem::current_path() << std::endl;
-            throw std::runtime_error("Cannot find any model (pack.obj or cube.obj)");
+            catch (...) { /* Handle fallback failure */ }
         }
+        else { /* Handle no fallback */ }
+    }
+    else {
+        std::cout << "Loaded primary pack model GLTF: " << packModelPath << std::endl;
     }
 }
 

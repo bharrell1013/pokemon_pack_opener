@@ -18,7 +18,7 @@ using json = nlohmann::json; // Alias for convenience
 // --- End Dependencies ---
 
 // Define the necessary headers for image loading
-#define STB_IMAGE_IMPLEMENTATION
+//#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include <glm/gtc/type_ptr.hpp>
 

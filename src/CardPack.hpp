@@ -39,6 +39,9 @@ private:
     glm::vec3 position;
     glm::vec3 rotation;
 
+    GLuint selectedPackPokemonTextureID; // ID of the overlay texture for this pack
+    glm::vec3 packColor;                 // Base color for this pack
+
 public:
     CardPack(TextureManager* texManager);
     ~CardPack();

@@ -61,6 +61,9 @@ private:
 
     float testHorizontalShift = 0.0f;
 
+    std::vector<GLuint> packPokemonTextureIDs; // Store IDs for pack overlay images
+    const std::string packImagesDirectory = "textures/pack_images/";
+
 public:
     TextureManager();
     ~TextureManager();
@@ -107,6 +110,8 @@ public:
     void setHoloDebugMode(int mode) { holoDebugRenderMode = mode % 8; }
     void setTestShift(float shift) { testHorizontalShift = shift; }
     float getTestShift() const { return testHorizontalShift; }
+
+    GLuint getRandomPackPokemonTextureID() const;
 };
 
 #endif

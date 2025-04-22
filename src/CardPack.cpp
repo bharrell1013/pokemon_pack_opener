@@ -7,6 +7,7 @@
 #include <GL/freeglut_std.h>
 #include <random> // For rarity selection
 #include <vector> // For type list
+#include <glm/gtc/random.hpp>
 
 CardPack::CardPack(TextureManager* texManager) :
     state(CLOSED), // Start closed
@@ -20,7 +21,9 @@ CardPack::CardPack(TextureManager* texManager) :
     isAnimating(false),
     position(glm::vec3(0.0f)),
     rotation(glm::vec3(0.0f)),
-    cardMovingToBackIndex(-1)
+    cardMovingToBackIndex(-1),
+    selectedPackPokemonTextureID(0), // Initialize to invalid
+    packColor(glm::vec3(0.8f))      // Initialize to a default (e.g., grey)
 {
     if (!textureManager) {
          throw std::runtime_error("CardPack created with null TextureManager!");
@@ -60,6 +63,26 @@ void CardPack::generateCards(CardDatabase& database) { // database might not be 
     cards.clear();
     int numCards = 10; // Standard pack size
     cards.reserve(numCards);
+
+    // --- NEW: Select Pack Appearance ---
+    if (textureManager) { // Check if textureManager is valid
+        selectedPackPokemonTextureID = textureManager->getRandomPackPokemonTextureID();
+
+        // Generate random color (e.g., between ~0.3 and 0.9 for R, G, B)
+        packColor = glm::vec3(
+            glm::linearRand(0.3f, 0.9f),
+            glm::linearRand(0.3f, 0.9f),
+            glm::linearRand(0.3f, 0.9f)
+        );
+        std::cout << "Selected Pack Overlay Texture ID: " << selectedPackPokemonTextureID
+            << ", Pack Base Color: (" << packColor.r << "," << packColor.g << "," << packColor.b << ")" << std::endl;
+    }
+    else {
+        std::cerr << "Error: TextureManager is null in generateCards. Cannot select pack appearance." << std::endl;
+        selectedPackPokemonTextureID = 0; // Reset to invalid
+        packColor = glm::vec3(0.8f);      // Reset to default color
+    }
+    // --- End Select Pack Appearance ---
 
     std::cout << "Generating " << numCards << " cards for the pack..." << std::endl;
 
@@ -153,54 +176,77 @@ void CardPack::generateCards(CardDatabase& database) { // database might not be 
     std::cout << "Finished generating " << cards.size() << " cards." << std::endl;
 }
 
-void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, GLuint packTextureID, const glm::vec3& cameraPos) {
+void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, GLuint basePackLayoutTextureID, const glm::vec3& cameraPos) {
     if (state == CLOSED) {
-        // --- Render the Pack Model ---
-        if (packModel) {
-            glUseProgram(packShaderProgramID); // Use the shader passed for the pack model
+        if (packModel && packShaderProgramID != 0) { // Check shader ID too
+            glUseProgram(packShaderProgramID);
 
-            // Setup pack model matrix (translate, rotate, scale)
+            // --- Setup Model Matrix (same as before) ---
             glm::mat4 packModelMatrix = glm::mat4(1.0f);
             packModelMatrix = glm::translate(packModelMatrix, position);
-            packModelMatrix = glm::rotate(packModelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
-            packModelMatrix = glm::rotate(packModelMatrix, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-            packModelMatrix = glm::rotate(packModelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
-             //packModelMatrix = glm::scale(packModelMatrix, glm::vec3(0.5f)); // Optional scaling
-
-            // Set model matrix uniform
+            packModelMatrix = glm::rotate(packModelMatrix, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f)); // Rotate X
+            packModelMatrix = glm::rotate(packModelMatrix, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate Y
+            packModelMatrix = glm::rotate(packModelMatrix, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f)); // Rotate Z
             GLint modelLoc = glGetUniformLocation(packShaderProgramID, "model");
-            if (modelLoc != -1) {
-                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(packModelMatrix));
-            } else {
-                 // Only warn once?
-                 // std::cerr << "Warning: Uniform 'model' not found in pack shader." << std::endl;
-            }
-            // Pass View and Projection matrices (assuming they are uniforms in pack shader too)
+            if (modelLoc != -1) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(packModelMatrix));
+
+            // --- Set View/Projection (same as before) ---
             GLint viewLoc = glGetUniformLocation(packShaderProgramID, "view");
             GLint projLoc = glGetUniformLocation(packShaderProgramID, "projection");
-             if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
-             if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+            if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+            if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
-            // Set texture uniform
-            GLint texLoc = glGetUniformLocation(packShaderProgramID, "diffuseTexture");
-            if (texLoc != -1) {
-                if (packTextureID != 0) {
-                    glActiveTexture(GL_TEXTURE0); // Activate texture unit 0
-                    glBindTexture(GL_TEXTURE_2D, packTextureID);
-                    glUniform1i(texLoc, 0); // Tell shader to use texture unit 0
-                } else {
-                    glBindTexture(GL_TEXTURE_2D, 0); // Unbind if texture ID is invalid
-                    // Optionally set a default color if texture is missing
-                }
-            } else {
-                 // Only warn once?
-                 // std::cerr << "Warning: Uniform 'diffuseTexture' not found in pack shader." << std::endl;
+            // --- Set Lighting Uniforms (same as before) ---
+            GLint viewPosLoc = glGetUniformLocation(packShaderProgramID, "viewPos");
+            GLint shininessLoc = glGetUniformLocation(packShaderProgramID, "shininess");
+            // (Add lightPos, lightColor if they aren't hardcoded in shader)
+            if (viewPosLoc != -1) glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
+            if (shininessLoc != -1) glUniform1f(shininessLoc, 32.0f); // Example
+
+            // --- NEW: Set Pack Color Uniform ---
+            GLint packColorLoc = glGetUniformLocation(packShaderProgramID, "packBaseColor");
+            if (packColorLoc != -1) {
+                glUniform3fv(packColorLoc, 1, glm::value_ptr(packColor)); // Use stored pack color
             }
+            else { /* Optional Warning */ }
 
-            packModel->draw(); // Draw the pack model
-            glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture unit 0
-        } else {
-            std::cerr << "Error: CardPack::render called in CLOSED state but packModel is null!" << std::endl;
+            // --- Bind Textures and Set Sampler Uniforms ---
+            GLint baseTexLoc = glGetUniformLocation(packShaderProgramID, "basePackTexture"); // Use new sampler name
+            GLint overlayTexLoc = glGetUniformLocation(packShaderProgramID, "pokemonOverlayTexture");
+
+            // Unit 0: Base Pack Layout Texture
+            if (baseTexLoc != -1) {
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, basePackLayoutTextureID); // Use the ID passed from Application
+                glUniform1i(baseTexLoc, 0); // Tell sampler to use unit 0
+            }
+            else { std::cerr << "Warning: Uniform 'basePackTexture' not found." << std::endl; }
+
+            // Unit 1: Pokémon Overlay Texture
+            if (overlayTexLoc != -1) {
+                glActiveTexture(GL_TEXTURE1);
+                if (selectedPackPokemonTextureID != 0) { // Only bind if we have a valid selected overlay
+                    glBindTexture(GL_TEXTURE_2D, selectedPackPokemonTextureID);
+                }
+                else {
+                    glBindTexture(GL_TEXTURE_2D, 0); // Bind 0 if no overlay selected/loaded
+                }
+                glUniform1i(overlayTexLoc, 1); // Tell sampler to use unit 1
+            }
+            else { std::cerr << "Warning: Uniform 'pokemonOverlayTexture' not found." << std::endl; }
+
+
+            // --- Draw the Pack Model (same as before) ---
+            packModel->draw();
+
+            // --- Clean up Texture Units ---
+            glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, 0);
+            glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, 0);
+
+        }
+        else {
+            if (!packModel) std::cerr << "Error: CardPack::render called in CLOSED state but packModel is null!" << std::endl;
+            if (packShaderProgramID == 0) std::cerr << "Error: CardPack::render called in CLOSED state but packShaderProgramID is 0!" << std::endl;
         }
     }
     else if (state == REVEALING) {

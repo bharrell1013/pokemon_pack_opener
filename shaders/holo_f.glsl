@@ -27,7 +27,7 @@ uniform int renderMode = 0; // Debug Mode
 // --- TUNING PARAMETERS (Set directly in shader) ---
 
 // Overall Holo Strength
-const float holoIntensity = 0.8;
+const float holoIntensity = 0.2;
 
 // L-System Overlay Blending (For ALL cards)
 const float overlayBlendIntensity = 0.4; // <<< How strongly overlay RGB blends with base (0=none, 1=fully opaque)
@@ -40,8 +40,8 @@ const int parallaxMinSteps = 4;
 const int parallaxMaxSteps = 16;
 
 // Specular Glow (Used for Holos)
-const float specularPower = 70.0;  // Sharp highlight
-const float specularIntensity = 0.9f; // Moderate brightness for holo glare
+const float specularPower = 50.0;  // Sharp highlight
+const float specularIntensity = 0.6f; // Moderate brightness for holo glare
 
 // View-Dependent Color Shift (Used for Holos)
 const float iridescenceIntensity = 1.3; // Rainbow brightness

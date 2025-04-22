@@ -2,11 +2,14 @@
 #include <iostream>
 #include <memory>
 #include "Application.hpp"
+#include <cstdlib> // Required for srand
+#include <ctime>   // Required for time
 
 // Global application instance
 //std::unique_ptr<Application> application;
 
 int main(int argc, char** argv) {
+	srand(static_cast<unsigned int>(time(NULL))); // Seed random number generator
     try {
         // Create and initialize the application
         application = std::make_unique<Application>();

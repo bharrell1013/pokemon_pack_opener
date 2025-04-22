@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iomanip>
 #include <functional>
+#include <algorithm> // For std::remove_if
 #include <glm/gtc/random.hpp>
 
 // --- Dependencies for API ---
@@ -49,6 +50,30 @@ TextureManager::TextureManager() : cardShader(0), holoShader(0), currentShader(0
              std::cerr << "Error creating image cache directory: " << e.what() << std::endl;
              // Decide how to handle this - maybe disable caching?
          }
+     }
+     std::cout << "Loading Pokémon pack overlay images from: " << packImagesDirectory << std::endl;
+     if (std::filesystem::exists(packImagesDirectory) && std::filesystem::is_directory(packImagesDirectory)) {
+         for (const auto& entry : std::filesystem::directory_iterator(packImagesDirectory)) {
+             if (entry.is_regular_file()) {
+                 std::string filepath = entry.path().string();
+                 // Optional: Check for specific extensions like .png
+                 if (filepath.length() > 4 && filepath.substr(filepath.length() - 4) == ".png") {
+                     std::cout << "  Loading overlay: " << filepath << std::endl;
+                     GLuint texID = loadTexture(filepath); // Use existing loadTexture
+                     if (texID != 0) {
+                         packPokemonTextureIDs.push_back(texID);
+                         std::cout << "    -> Loaded Overlay Texture ID: " << texID << std::endl;
+                     }
+                     else {
+                         std::cerr << "    -> Failed to load overlay texture: " << filepath << std::endl;
+                     }
+                 }
+             }
+         }
+         std::cout << "Finished loading " << packPokemonTextureIDs.size() << " pack overlay images." << std::endl;
+     }
+     else {
+         std::cerr << "Warning: Pack images directory not found or not a directory: " << packImagesDirectory << std::endl;
      }
 }
 
@@ -1462,4 +1487,18 @@ void TextureManager::cycleShaderMode() {
 
 int TextureManager::getShaderRenderMode() const {
     return shaderRenderMode;
+}
+
+GLuint TextureManager::getRandomPackPokemonTextureID() const {
+    if (packPokemonTextureIDs.empty()) {
+        std::cerr << "Warning: No pack Pokemon overlay textures loaded to choose from." << std::endl;
+        return 0; // Return 0 (invalid ID) if none are loaded
+    }
+
+    // Use a static generator for better randomness over multiple calls
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<size_t> distrib(0, packPokemonTextureIDs.size() - 1);
+
+    return packPokemonTextureIDs[distrib(gen)];
 }

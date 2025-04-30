@@ -922,6 +922,19 @@ void TextureManager::applyHoloShader(const Card& card, float time) {
     }
     else { /* Warn */ }
 
+    // --- NEW: Pass Artwork Rectangle Uniforms ---
+    GLint artworkMinLoc = glGetUniformLocation(holoShader, "artworkRectMin");
+    GLint artworkMaxLoc = glGetUniformLocation(holoShader, "artworkRectMax");
+    if (artworkMinLoc != -1) {
+        glUniform2fv(artworkMinLoc, 1, glm::value_ptr(artworkRectMin));
+    }
+    else { std::cerr << "Warning: Uniform 'artworkRectMin' not found in holo shader." << std::endl; }
+    if (artworkMaxLoc != -1) {
+        glUniform2fv(artworkMaxLoc, 1, glm::value_ptr(artworkRectMax));
+    }
+    else { std::cerr << "Warning: Uniform 'artworkRectMax' not found in holo shader." << std::endl; }
+    // --- END NEW ---
+
     GLint lightDirLoc = glGetUniformLocation(holoShader, "lightDir");
     if (lightDirLoc != -1) {
         // Example light direction - make this configurable maybe
@@ -1275,200 +1288,290 @@ std::string TextureManager::getCacheFilename(const std::string& url) const {
 }
 
 GLuint TextureManager::generateProceduralOverlayTexture(Card& card) {
-    // --- 1. Generate Cache Key ---
-    // Key based on unique card properties affecting the overlay
-    std::string cacheKey = "lsys_overlay_" + card.getRarity() + "_" + card.getPokemonType() + "_v3" + std::to_string(lsystemVariationLevel);
-    // Optional: Add more factors like a version number if you change L-systems later
-    // cacheKey += "_v1";
+    // --- 1. Generate Cache Key (Include Type Now) ---
+    std::string rarity = card.getRarity();
+    std::string type = card.getPokemonType();
+    // Ensure type string is suitable for filename/key (e.g., replace spaces)
+    std::string typeKey = type;
+    std::replace(typeKey.begin(), typeKey.end(), ' ', '_'); // Basic sanitization
+
+    std::string cacheKey = "lsys_overlay_" + rarity + "_" + typeKey + "_v5_" + std::to_string(lsystemVariationLevel); // Increment version number
+
 
     // --- 2. Check Cache ---
     auto it = textureMap.find(cacheKey);
     if (it != textureMap.end()) {
-        // std::cout << "[Overlay Gen] Cache hit for: " << cacheKey << std::endl;
-        return it->second; // Return cached texture ID
+        // Update the card's level tracker even on cache hit
+        card.setGeneratedOverlayLevel(lsystemVariationLevel);
+        return it->second;
     }
 
     std::cout << "[Overlay Gen] Cache miss for: " << cacheKey << ". Generating..." << std::endl;
 
-    // --- 3.1 Determine Texture Dimensions and Create Renderer EARLY ---
+    // --- 3. Setup Renderer and L-System ---
     int texWidth = 256;
     int texHeight = 256;
-    LSystemRenderer renderer(texWidth, texHeight); // <<< CREATE RENDERER HERE
-    renderer.clearBuffer(glm::vec3(0.0f)); // <<< CLEAR BUFFER ONCE HERE
+    LSystemRenderer renderer(texWidth, texHeight);
+    renderer.clearBuffer(glm::vec3(0.0f)); // Clear to transparent black
 
-    // --- 3.2 Setup L-System based on Rarity/Type ---
     LSystem lSystem;
-    int iterations = 4; // Default iterations
+    int iterations = 4;
     float step = 3.0f;
     float angle = 22.5f;
-    glm::vec3 startColor = glm::vec3(1.0f); // Default white overlay
-    glm::vec2 startPos = glm::vec2(texWidth / 2.0f, texHeight / 2.0f); // Start at center
-    float startAngle = 90.0f; // Start facing up
-	int numPasses = 1; // Default to 1 pass
-    int lineThickness = 2; // Default thickness
-    int passIncrement = 5;
+    glm::vec3 startColor = glm::vec3(1.0f);
+    int numPasses = 1;
+    int lineThickness = 2;
+    int baseNumPasses = 10; // Base passes before variation level adjustment
+    int passIncrement = 5;  // Passes added/removed per variation level
 
-    std::string rarity = card.getRarity();
-    std::string type = card.getPokemonType();
-
-    static const glm::vec3 typeBasedHoloColors[] = {
-        glm::vec3(1.0f, 0.0f, 0.0f), // Red
-        glm::vec3(0.0f, 1.0f, 0.0f), // Green
-        glm::vec3(0.0f, 0.0f, 1.0f)  // Blue
-        // You can add additional colors if needed.
+    // --- 4. Define Type-Specific Parameters ---
+    // Define base colors for types (match shader array if possible)
+    const glm::vec3 typeBaseColors[12] = {
+        glm::vec3(0.9, 0.9, 0.8), glm::vec3(1.0, 0.5, 0.2), glm::vec3(0.3, 0.7, 1.0),
+        glm::vec3(0.4, 0.9, 0.4), glm::vec3(1.0, 1.0, 0.3), glm::vec3(0.9, 0.5, 0.9),
+        glm::vec3(0.8, 0.6, 0.3), glm::vec3(0.5, 0.5, 0.6), glm::vec3(0.6, 0.4, 0.9),
+        glm::vec3(1.0, 0.7, 0.9), glm::vec3(0.7, 0.7, 0.8), glm::vec3(0.6, 0.4, 0.8)
     };
+    int typeIndex = getTypeValue(type); // Use existing function
+    glm::vec3 defaultColor = (typeIndex >= 0 && typeIndex < 12) ? typeBaseColors[typeIndex] : glm::vec3(0.8f);
+    startColor = defaultColor;
+
+    // Default Settings (can be overridden by type)
+    lSystem.setAxiom("F");
+    lSystem.addRule('F', "F[+F]F[-F]F"); // Default branching
+    iterations = 4;
+    angle = 25.0f;
+    step = 3.0f;
+    baseNumPasses = 15;
+    passIncrement = 8;
+    lineThickness = 1;
 
     if (rarity == "normal") {
-        // Simple deformation - e.g., subtle wavy lines or branching
-        iterations = 3;
         lSystem.setAxiom("F");
-        lSystem.addRule('F', "F[-F][+F]F"); // More symmetrical branching maybe? Or F[+F]F[-F]F
-        angle = glm::linearRand(25.0f, 45.0f); // Widen angle variation
-        step = 4.0f; // Smaller step can make denser patterns
-        startColor = glm::vec3(0.7f, 0.7f, 0.7f); // Keep greyish
-        // --- NEW: Random Start Angle & Multiple Passes ---
-        numPasses = 15; // Set number of passes for normal
-		lineThickness = 1; // Set line thickness for normal
+        lSystem.addRule('F', "F[-F][+F]F"); // Simple branching
+        iterations = 3;
+        angle = glm::linearRand(25.0f, 45.0f);
+        step = 4.0f;
+        startColor = glm::vec3(0.7f, 0.7f, 0.7f); // Grey color
+        baseNumPasses = 10; // Fewer passes for subtle effect
         passIncrement = 3;
-
-        //// Generate the L-System string ONCE if rules/iterations are fixed for all passes
-        //std::string lsystemStringPass = lSystem.generate(iterations);
-        //if (lsystemStringPass.empty()) { /* handle error, return 0 */ }
-
-        //for (int p = 0; p < numPasses; ++p) {
-        //    startPos = glm::vec2(glm::linearRand(texWidth * 0.1f, texWidth * 0.9f), // Widen start area
-        //        glm::linearRand(texHeight * 0.1f, texHeight * 0.9f));
-        //    startAngle = glm::linearRand(0.0f, 360.0f);
-        //    glm::vec3 passColor = startColor * glm::linearRand(0.7f, 1.0f);
-
-        //    // Set parameters FOR THIS PASS
-        //    renderer.setParameters(step, angle, passColor, startPos, startAngle);
-        //    // Render THIS pass onto the existing buffer
-        //    renderer.render(lsystemStringPass); // Assumes render doesn't clear buffer
-        //}
-        //// --- End Multiple Passes ---
+        lineThickness = 1;
+        std::cout << "[Overlay Gen] Applying Normal rarity settings." << std::endl;
     }
-    else if (rarity == "reverse" || rarity == "holo") {
-        // Dense, overlapping, colored pattern for full coverage holo
-        iterations = 5; // More iterations needed for density
-        // Rule for dense branching/filling
-        lSystem.setAxiom("X");
-        lSystem.addRule('X', "F[-X][+X]FX"); // Good branching rule
-        lSystem.addRule('F', "FF");          // Lines get longer/denser
-        angle = glm::linearRand(20.0f, 25.0f); // Consistent small angle
-        step = 2.0f; // Small steps for density
-        numPasses = 30; // MANY passes from random points
-        lineThickness = 2; // Standard thickness
-        passIncrement = 15;
-
-        int typeIndex = getTypeValue(type);
-        startColor = (typeIndex >= 0 && typeIndex < 12) ? (typeBasedHoloColors[typeIndex] * 0.7f + 0.3f) : glm::vec3(0.8f);
-
-        //std::string lsystemStringPass = lSystem.generate(iterations);
-        //if (lsystemStringPass.empty()) { /* error */ return 0; }
-        //renderer.setLineThickness(lineThickness);
-
-        //for (int p = 0; p < numPasses; ++p) {
-        //    glm::vec2 startPos(glm::linearRand(0.0f, (float)texWidth),
-        //        glm::linearRand(0.0f, (float)texHeight));
-        //    float startAngle = glm::linearRand(0.0f, 360.0f);
-        //    // Vary color slightly per pass for more visual interest
-        //    glm::vec3 passColor = startColor * glm::linearRand(0.7f, 1.3f);
-        //    renderer.setParameters(step, angle, glm::clamp(passColor, 0.0f, 1.0f), startPos, startAngle);
-        //    renderer.render(lsystemStringPass);
-        //}
-
+    else {
+        // --- Type-Specific Overrides ---
+        if (type == "Water") {
+            lSystem.setAxiom("F");
+            lSystem.addRule('F', "F F + [ + F - F - F ] - [ - F + F + F ]"); // Hilbert curve variant (more curvy)
+            // Or maybe: lSystem.addRule('F', "F[+F]F[--F]F"); // Wave-like?
+            angle = 90.0f; // Hilbert needs 90
+            step = 4.0f;
+            iterations = 4; // Hilbert gets long quick
+            baseNumPasses = 10;
+            passIncrement = 5;
+            lineThickness = 2;
+            startColor = glm::vec3(0.5, 0.8, 1.0); // Ensure strong blue/cyan
+        }
+        else if (type == "Fire") {
+            lSystem.setAxiom("X");
+            // Stochastic rule for more chaotic branching
+            // Using a simple random branching for now
+            lSystem.addRule('X', "F[+X][-X]FX"); // Sharp branching
+            lSystem.addRule('F', "FF");
+            angle = glm::linearRand(18.0f, 30.0f); // Random angle per generation? (Needs LSystem modification) - Use fixed for now.
+            angle = 22.5f;
+            step = 2.5f;
+            iterations = 5;
+            baseNumPasses = 25;
+            passIncrement = 10;
+            lineThickness = 1;
+            startColor = glm::vec3(1.0, 0.6, 0.2); // Orange/Red
+        }
+        else if (type == "Grass") {
+            lSystem.setAxiom("X");
+            lSystem.addRule('X', "F-[[X]+X]+F[+FX]-X"); // Classic plant-like
+            lSystem.addRule('F', "FF");
+            angle = 25.0f;
+            step = 2.0f;
+            iterations = 5;
+            baseNumPasses = 20;
+            passIncrement = 8;
+            lineThickness = 1;
+            startColor = glm::vec3(0.5, 0.9, 0.4); // Green
+        }
+        else if (type == "Lightning") {
+            lSystem.setAxiom("F");
+            lSystem.addRule('F', "F+F--F+F"); // Koch curve segment (jagged)
+            angle = 60.0f;
+            step = 4.0f;
+            iterations = 3;
+            baseNumPasses = 15;
+            passIncrement = 6;
+            lineThickness = 2;
+            startColor = glm::vec3(1.0, 1.0, 0.5); // Yellow
+        }
+        else if (type == "Psychic") {
+            lSystem.setAxiom("F+F+F+F"); // Start with a square
+            lSystem.addRule('F', "F+f-FF+F+FF+Ff+FF-f+FF-F-FF-Ff-FFF"); // Complex fractal curve
+            lSystem.addRule('f', "ffffff"); // Move without drawing
+            angle = 90.0f;
+            step = 1.5f;
+            iterations = 2; // Gets complex fast
+            baseNumPasses = 10;
+            passIncrement = 4;
+            lineThickness = 1;
+            startColor = glm::vec3(0.9, 0.6, 1.0); // Purple/Pink
+        }
+        else if (type == "Fighting") {
+            lSystem.setAxiom("F+F+F+F"); // Square base
+            lSystem.addRule('F', "F+F-F-F+F"); // Box fractal
+            angle = 90.0f;
+            step = 5.0f;
+            iterations = 3;
+            baseNumPasses = 12;
+            passIncrement = 5;
+            lineThickness = 2;
+            startColor = glm::vec3(0.8, 0.5, 0.3); // Brown/Orange
+        }
+        // --- Add more type overrides here (Darkness, Metal, Dragon, etc.) ---
+        // Example: Dragon might use Sierpinski triangle rules
+        else if (type == "Dragon") {
+            lSystem.setAxiom("F-G-G");
+            lSystem.addRule('F', "F-G+F+G-F");
+            lSystem.addRule('G', "GG");
+            angle = 120.0f;
+            step = 3.0f;
+            iterations = 4;
+            baseNumPasses = 15;
+            passIncrement = 7;
+            lineThickness = 1;
+            startColor = glm::vec3(0.6, 0.4, 0.9); // Indigo
+        }
+        else if (type == "Darkness") {
+            lSystem.setAxiom("F");
+            lSystem.addRule('F', "F[+F-F]F[-F+F]F"); // Jagged, slightly chaotic
+            angle = 35.0f; step = 2.8f; iterations = 4; baseNumPasses = 18; passIncrement = 7; lineThickness = 1;
+            startColor = glm::vec3(0.6, 0.5, 0.7); // Dark Purple/Grey
+        }
+        else if (type == "Metal") {
+            lSystem.setAxiom("F+F+F+F");
+            lSystem.addRule('F', "FF+F+F+F+FF"); // Variation of box/grid fractal
+            angle = 90.0f; step = 3.5f; iterations = 3; baseNumPasses = 14; passIncrement = 6; lineThickness = 2;
+            startColor = glm::vec3(0.8, 0.8, 0.85); // Light Grey/Silver
+        }
+        else if (type == "Fairy") {
+            lSystem.setAxiom("X");
+            lSystem.addRule('X', "F[+X]F[-X]+X"); // Gentler curves than fire
+            lSystem.addRule('F', "FF");
+            angle = 20.0f; step = 2.2f; iterations = 5; baseNumPasses = 22; passIncrement = 9; lineThickness = 1;
+            startColor = glm::vec3(1.0, 0.8, 0.9); // Pink
+        }
+        else if (type == "Ghost") {
+            lSystem.setAxiom("YF"); // Modified Heighway dragon
+            lSystem.addRule('X', "X+YF+");
+            lSystem.addRule('Y', "-FX-Y");
+            angle = 90.0f; step = 3.0f; iterations = 6; // Needs more iterations
+            baseNumPasses = 16; passIncrement = 6; lineThickness = 1;
+            startColor = glm::vec3(0.7, 0.6, 0.9); // Lavender
+        }
+        else {
+            // Keep default settings for other types (Normal, Metal, Dark, Fairy, Ghost...)
+            startColor = defaultColor;
+        }
+        // --- 5. Adjust based on Rarity (after type settings) ---
+        // Make reverse/holo patterns denser or brighter maybe?
+        if (rarity == "reverse" || rarity == "holo") {
+            baseNumPasses = std::max(20, baseNumPasses + 5); // Increase passes
+            passIncrement = std::max(8, passIncrement + 3);
+            lineThickness = std::max(lineThickness, 2); // Ensure minimum thickness
+        }
+        else if (rarity == "ex" || rarity == "full art") {
+            // Maybe use the dot command approach for these regardless of type?
+            lSystem.clearRules(); // Clear type-based rules
+            lSystem.setAxiom("A");
+            lSystem.addRule('A', ". F [+A] [-A] F A"); // Draw dot, move, turn, branch
+            lSystem.addRule('F', "FF"); // Move command (short)
+            angle = glm::linearRand(45.0f, 135.0f);
+            step = 1.0;
+            iterations = 6; // Fewer iterations needed for dots
+            baseNumPasses = 50; // Lots of dots needed
+            passIncrement = 20;
+            lineThickness = 2; // Make dots 2x2
+            startColor = glm::vec3(1.0f); // White dots for intensity map
+            std::cout << "[Overlay Gen] Overriding L-System for EX/FullArt to use Dot Sparkle pattern." << std::endl;
+        }
     }
-    else if (rarity == "ex" || rarity == "full art") {
-        // Generate a "sparkle map" using dots
-        iterations = 7; // High iterations for many dots
-        lSystem.setAxiom("A");
-        // Rules using the '.' dot command, turning randomly
-        lSystem.addRule('A', ". F [+A] [-A] F A"); // Draw dot, move, turn, branch
-        lSystem.addRule('F', "F"); // Move command (can be short)
-        angle = glm::linearRand(45.0f, 135.0f); // Random turns
-        step = 1.0; // Very short step just to move between dots
-        numPasses = 50; // LOTS of passes/starting points for random dots
-        lineThickness = 2; // Make dots 2x2
-        startColor = glm::vec3(1.0f); // Draw dots as white
-        passIncrement = 10;
 
-        //std::string lsystemStringPass = lSystem.generate(iterations);
-        //if (lsystemStringPass.empty()) { /* error */ return 0; }
-        //renderer.setLineThickness(lineThickness);
 
-        //for (int p = 0; p < numPasses; ++p) {
-        //    glm::vec2 startPos(glm::linearRand(0.0f, (float)texWidth),
-        //        glm::linearRand(0.0f, (float)texHeight));
-        //    float startAngle = glm::linearRand(0.0f, 360.0f);
-        //    // Color is always white for sparkle map intensity
-        //    renderer.setParameters(step, angle, startColor, startPos, startAngle);
-        //    renderer.render(lsystemStringPass);
-        //}
+    
+
+
+    // --- 6. Generate String and Render Passes ---
+    int effectiveNumPasses = std::max(1, baseNumPasses + lsystemVariationLevel * passIncrement);
+    std::string lsystemString = lSystem.generate(iterations);
+    if (lsystemString.empty()) {
+        std::cerr << "Error: L-System generation resulted in empty string for key: " << cacheKey << std::endl;
+        return 0;
     }
-    int effectiveNumPasses = std::max(1, numPasses + lsystemVariationLevel * passIncrement); // Ensure at least 1 pass
-    // --- Generate L-System String ---
-    std::string lsystemStringPass = lSystem.generate(iterations); // Iterations usually fixed per rarity?
-    if (lsystemStringPass.empty()) { /* error */ return 0; }
     renderer.setLineThickness(lineThickness);
 
-    // --- Render Multiple Passes (Using effectiveNumPasses) ---
-    std::cout << "[Overlay Gen] Rendering with " << effectiveNumPasses << " passes." << std::endl;
+    std::cout << "[Overlay Gen] Rendering '" << type << "' type, '" << rarity << "' rarity pattern. Passes: " << effectiveNumPasses << ", Thickness: " << lineThickness << ", Iterations: " << iterations << std::endl;
+
+    // Use random generator for placing passes
+    std::random_device rd_pass;
+    std::mt19937 gen_pass(rd_pass());
+    std::uniform_real_distribution<float> dist_pos_x(0.0f, (float)texWidth);
+    std::uniform_real_distribution<float> dist_pos_y(0.0f, (float)texHeight);
+    std::uniform_real_distribution<float> dist_angle(0.0f, 360.0f);
+    std::uniform_real_distribution<float> dist_color_mod(0.7f, 1.3f);
+
+
     for (int p = 0; p < effectiveNumPasses; ++p) {
-        // Randomize startPos, startAngle, maybe passColor slightly per pass (as before)
-        startPos = glm::vec2(glm::linearRand(0.0f, (float)texWidth),
-            glm::linearRand(0.0f, (float)texHeight));
-        startAngle = glm::linearRand(0.0f, 360.0f);
-        glm::vec3 passColor = startColor * glm::linearRand(0.7f, 1.3f);
-        renderer.setParameters(step, angle, glm::clamp(passColor, 0.0f, 1.0f), startPos, startAngle);
-        renderer.render(lsystemStringPass); // Render this pass
+        glm::vec2 passStartPos(dist_pos_x(gen_pass), dist_pos_y(gen_pass));
+        float passStartAngle = dist_angle(gen_pass);
+        // Use the startColor determined by rarity/type logic
+        // Apply slight variation only if not normal rarity (which uses fixed grey)
+        glm::vec3 passColor = startColor;
+        if (rarity != "normal") {
+            passColor *= dist_color_mod(gen_pass);
+        }
+        renderer.setParameters(step, angle, glm::clamp(passColor, 0.0f, 1.0f), passStartPos, passStartAngle);
+        renderer.render(lsystemString);
     }
 
-        const std::vector<unsigned char>& overlayPixelData = renderer.getPixelData(); // Get data after all passes
-        if (overlayPixelData.empty() || overlayPixelData.size() != static_cast<size_t>(texWidth) * texHeight * 4) {
-            std::cerr << "Error: L-System rendering failed or produced invalid data for " << cacheKey << std::endl;
-            return 0; // Indicate failure
-        }
+    // --- 7. Get Pixel Data ---
+    const std::vector<unsigned char>& overlayPixelData = renderer.getPixelData();
+    if (overlayPixelData.empty() || overlayPixelData.size() != static_cast<size_t>(texWidth) * texHeight * 4) {
+        std::cerr << "Error: L-System rendering failed or produced invalid data for " << cacheKey << std::endl;
+        return 0;
+    }
 
-    // --- 7. Upload to OpenGL ---
+    // --- 8. Upload to OpenGL (Same as before) ---
     GLuint overlayTextureID = 0;
     glGenTextures(1, &overlayTextureID);
     if (overlayTextureID == 0) {
         std::cerr << "OpenGL Error: Failed to generate texture ID for overlay " << cacheKey << std::endl;
         return 0;
     }
-
     glBindTexture(GL_TEXTURE_2D, overlayTextureID);
-
-    // Set texture parameters
-    // GL_NEAREST might be good for sharp L-system lines initially
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // Use mipmaps
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // How should the pattern repeat or clamp? Repeat is often good for overlays.
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, overlayPixelData.data());
+    glGenerateMipmap(GL_TEXTURE_2D);
+    GLenum err;
+    while ((err = glGetError()) != GL_NO_ERROR) {
+        std::cerr << "OpenGL Texture Error (Overlay " << cacheKey << "): " << err << std::endl;
+        glDeleteTextures(1, &overlayTextureID); // Clean up failed texture
+        glBindTexture(GL_TEXTURE_2D, 0);
+        return 0; // Indicate failure
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
 
-    // Upload the pixel data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, // Internal format
-                 texWidth, texHeight, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, // Format and type of input data
-                 overlayPixelData.data());
-    glGenerateMipmap(GL_TEXTURE_2D); // Generate mipmaps
-
-    // Check for errors during texture creation
-     GLenum err;
-     while ((err = glGetError()) != GL_NO_ERROR) {
-         std::cerr << "OpenGL Texture Error (Overlay " << cacheKey << "): " << err << std::endl;
-         glDeleteTextures(1, &overlayTextureID); // Clean up failed texture
-         glBindTexture(GL_TEXTURE_2D, 0);
-         return 0; // Indicate failure
-     }
-
-    glBindTexture(GL_TEXTURE_2D, 0); // Unbind
-
-    // --- 8. Update Cache ---
+    // --- 9. Update Cache and Card State ---
     textureMap[cacheKey] = overlayTextureID;
-    card.setGeneratedOverlayLevel(lsystemVariationLevel);
+    card.setGeneratedOverlayLevel(lsystemVariationLevel); // Store the level used
     std::cout << "[Overlay Gen] Generated and cached texture ID " << overlayTextureID << " for: " << cacheKey << std::endl;
 
     return overlayTextureID;

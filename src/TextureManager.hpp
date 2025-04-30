@@ -64,6 +64,9 @@ private:
     std::vector<GLuint> packPokemonTextureIDs; // Store IDs for pack overlay images
     const std::string packImagesDirectory = "textures/pack_images/";
 
+    glm::vec2 artworkRectMin = glm::vec2(0.08f, 0.50f); // Lower Y boundary moved up
+    glm::vec2 artworkRectMax = glm::vec2(0.92f, 0.90f); // Upper Y boundary (below name/HP)
+
 public:
     TextureManager();
     ~TextureManager();

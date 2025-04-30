@@ -454,21 +454,34 @@ void CardPack::cycleCard() {
     int newFrontCardIdx = (currentCardIndex + 1) % cards.size();
 
     // *** CHECK AND REGENERATE OVERLAY FOR THE *NEW* FRONT CARD ***
-    Card& nextCard = cards[newFrontCardIdx];
-    int currentVariationLevel = textureManager->getLSystemVariationLevel();
+    if (textureManager) { // Check texture manager validity
+        Card& nextCard = cards[newFrontCardIdx];
+        int currentVariationLevel = textureManager->getLSystemVariationLevel();
+        int cardOverlayLevel = nextCard.getGeneratedOverlayLevel(); // Get level stored on card
 
-    if (nextCard.getGeneratedOverlayLevel() != currentVariationLevel) {
-        std::cout << "[Cycle Card] Overlay level mismatch for next card " << newFrontCardIdx
-            << " (Card: " << nextCard.getGeneratedOverlayLevel()
-            << ", Manager: " << currentVariationLevel << "). Regenerating..." << std::endl;
+        // Compare card's level with the manager's current level
+        if (cardOverlayLevel != currentVariationLevel) {
+            std::cout << "[Cycle Card] Overlay level mismatch for next card " << newFrontCardIdx
+                << " (Card Level: " << cardOverlayLevel
+                << ", Manager Level: " << currentVariationLevel << "). Regenerating..." << std::endl;
 
-        // Regenerate the overlay. This call will also update nextCard's internal level.
-        GLuint newOverlayID = textureManager->generateProceduralOverlayTexture(nextCard);
+            // Regenerate the overlay. This call uses the current manager level
+            // and updates the card's level internally via setGeneratedOverlayLevel.
+            GLuint newOverlayID = textureManager->generateProceduralOverlayTexture(nextCard);
 
-        // Update the texture ID stored in the card object
-        nextCard.setOverlayTextureID(newOverlayID);
-        std::cout << "[Cycle Card] Regenerated Overlay ID: " << newOverlayID << std::endl;
+            // Update the texture ID stored in the card object
+            nextCard.setOverlayTextureID(newOverlayID);
+            std::cout << "[Cycle Card] Regenerated Overlay ID: " << newOverlayID
+                << " (New Card Level: " << nextCard.getGeneratedOverlayLevel() << ")" << std::endl;
+        }
+        else {
+            // std::cout << "[Cycle Card] Overlay level match for card " << newFrontCardIdx << ". No regeneration needed." << std::endl;
+        }
     }
+    else {
+        std::cerr << "[Cycle Card] Error: TextureManager is null. Cannot check/regenerate overlay." << std::endl;
+    }
+    // *** END OVERLAY CHECK/REGEN ***
     // *** END OVERLAY CHECK/REGEN ***
 
     // --- 1. Start Stage 1 for the Card Moving FROM Front ---

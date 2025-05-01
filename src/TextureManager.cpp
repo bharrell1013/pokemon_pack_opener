@@ -1288,278 +1288,251 @@ std::string TextureManager::getCacheFilename(const std::string& url) const {
 }
 
 GLuint TextureManager::generateProceduralOverlayTexture(Card& card) {
-    // --- 1. Generate Cache Key (Include Type Now) ---
     std::string rarity = card.getRarity();
     std::string type = card.getPokemonType();
-    // Ensure type string is suitable for filename/key (e.g., replace spaces)
     std::string typeKey = type;
-    std::replace(typeKey.begin(), typeKey.end(), ' ', '_'); // Basic sanitization
+    std::replace(typeKey.begin(), typeKey.end(), ' ', '_');
 
-    std::string cacheKey = "lsys_overlay_" + rarity + "_" + typeKey + "_v5_" + std::to_string(lsystemVariationLevel); // Increment version number
+    std::string cacheKey;
+    bool useGlossyOverlay = (rarity == "holo" || rarity == "ex" || rarity == "full art");
 
+    if (useGlossyOverlay) {
+        cacheKey = "gloss_overlay_" + typeKey; // Simpler key, no variation level needed
+    }
+    else {
+        cacheKey = "lsys_overlay_" + rarity + "_" + typeKey + "_v5_" + std::to_string(lsystemVariationLevel);
+        if (card.getGeneratedOverlayLevel() == lsystemVariationLevel) {
+            auto it_lsys = textureMap.find(cacheKey);
+            if (it_lsys != textureMap.end()) {
+                return it_lsys->second; // Correct variation level already generated and cached
+            }
+        }
+    }
 
-    // --- 2. Check Cache ---
     auto it = textureMap.find(cacheKey);
     if (it != textureMap.end()) {
-        // Update the card's level tracker even on cache hit
-        card.setGeneratedOverlayLevel(lsystemVariationLevel);
+        if (useGlossyOverlay) card.setGeneratedOverlayLevel(-2); // Use -2 to indicate glossy overlay
+        else card.setGeneratedOverlayLevel(lsystemVariationLevel);
         return it->second;
     }
 
     std::cout << "[Overlay Gen] Cache miss for: " << cacheKey << ". Generating..." << std::endl;
 
-    // --- 3. Setup Renderer and L-System ---
-    int texWidth = 256;
-    int texHeight = 256;
-    LSystemRenderer renderer(texWidth, texHeight);
-    renderer.clearBuffer(glm::vec3(0.0f)); // Clear to transparent black
+    int texWidth = 1;
+    int texHeight = 1;
+    GLuint overlayTextureID = 0;
+    std::vector<unsigned char> overlayPixelData;
 
-    LSystem lSystem;
-    int iterations = 4;
-    float step = 3.0f;
-    float angle = 22.5f;
-    glm::vec3 startColor = glm::vec3(1.0f);
-    int numPasses = 1;
-    int lineThickness = 2;
-    int baseNumPasses = 10; // Base passes before variation level adjustment
-    int passIncrement = 5;  // Passes added/removed per variation level
+    if (useGlossyOverlay) {
+        std::cout << "[Overlay Gen] Generating BLANK (transparent) overlay for " << rarity << "/" << type << "." << std::endl;
+        overlayPixelData = { 0, 0, 0, 0 }; // RGBA = Transparent Black
+        texWidth = 1;
+        texHeight = 1;
 
-    // --- 4. Define Type-Specific Parameters ---
-    // Define base colors for types (match shader array if possible)
-    const glm::vec3 typeBaseColors[12] = {
-        glm::vec3(0.9, 0.9, 0.8), glm::vec3(1.0, 0.5, 0.2), glm::vec3(0.3, 0.7, 1.0),
-        glm::vec3(0.4, 0.9, 0.4), glm::vec3(1.0, 1.0, 0.3), glm::vec3(0.9, 0.5, 0.9),
-        glm::vec3(0.8, 0.6, 0.3), glm::vec3(0.5, 0.5, 0.6), glm::vec3(0.6, 0.4, 0.9),
-        glm::vec3(1.0, 0.7, 0.9), glm::vec3(0.7, 0.7, 0.8), glm::vec3(0.6, 0.4, 0.8)
-    };
-    int typeIndex = getTypeValue(type); // Use existing function
-    glm::vec3 defaultColor = (typeIndex >= 0 && typeIndex < 12) ? typeBaseColors[typeIndex] : glm::vec3(0.8f);
-    startColor = defaultColor;
-
-    // Default Settings (can be overridden by type)
-    lSystem.setAxiom("F");
-    lSystem.addRule('F', "F[+F]F[-F]F"); // Default branching
-    iterations = 4;
-    angle = 25.0f;
-    step = 3.0f;
-    baseNumPasses = 15;
-    passIncrement = 8;
-    lineThickness = 1;
-
-    if (rarity == "normal") {
-        lSystem.setAxiom("F");
-        lSystem.addRule('F', "F[-F][+F]F"); // Simple branching
-        iterations = 3;
-        angle = glm::linearRand(25.0f, 45.0f);
-        step = 4.0f;
-        startColor = glm::vec3(0.7f, 0.7f, 0.7f); // Grey color
-        baseNumPasses = 10; // Fewer passes for subtle effect
-        passIncrement = 3;
-        lineThickness = 1;
-        std::cout << "[Overlay Gen] Applying Normal rarity settings." << std::endl;
     }
     else {
-        // --- Type-Specific Overrides ---
-        if (type == "Water") {
+        texWidth = 256; // Restore original size for L-systems
+        texHeight = 256;
+        std::cout << "[Overlay Gen] Generating L-SYSTEM overlay for " << rarity << "/" << type << "." << std::endl;
+
+        LSystemRenderer renderer(texWidth, texHeight);
+        renderer.clearBuffer(glm::vec3(0.0f)); // Clear to transparent black
+
+        LSystem lSystem;
+        int iterations = 4;
+        float step = 3.0f;
+        float angle = 22.5f;
+        glm::vec3 startColor = glm::vec3(1.0f);
+        int lineThickness = 2;
+        int baseNumPasses = 10;
+        int passIncrement = 5;
+
+        const glm::vec3 typeBaseColors[12] = {
+            glm::vec3(0.9, 0.9, 0.8), glm::vec3(1.0, 0.5, 0.2), glm::vec3(0.3, 0.7, 1.0),
+            glm::vec3(0.4, 0.9, 0.4), glm::vec3(1.0, 1.0, 0.3), glm::vec3(0.9, 0.5, 0.9),
+            glm::vec3(0.8, 0.6, 0.3), glm::vec3(0.5, 0.5, 0.6), glm::vec3(0.6, 0.4, 0.9),
+            glm::vec3(1.0, 0.7, 0.9), glm::vec3(0.7, 0.7, 0.8), glm::vec3(0.6, 0.4, 0.8)
+        };
+        int typeIndex = getTypeValue(type); // Use existing function
+        glm::vec3 defaultColor = (typeIndex >= 0 && typeIndex < 12) ? typeBaseColors[typeIndex] : glm::vec3(0.8f);
+        startColor = defaultColor;
+
+        // Default Settings
+        lSystem.setAxiom("F");
+        lSystem.addRule('F', "F[+F]F[-F]F"); // Default branching
+        iterations = 4;
+        angle = 25.0f;
+        step = 3.0f;
+        baseNumPasses = 15;
+        passIncrement = 8;
+        lineThickness = 1;
+
+        if (rarity == "normal") {
             lSystem.setAxiom("F");
-            lSystem.addRule('F', "F F + [ + F - F - F ] - [ - F + F + F ]"); // Hilbert curve variant (more curvy)
-            // Or maybe: lSystem.addRule('F', "F[+F]F[--F]F"); // Wave-like?
-            angle = 90.0f; // Hilbert needs 90
-            step = 4.0f;
-            iterations = 4; // Hilbert gets long quick
-            baseNumPasses = 10;
-            passIncrement = 5;
-            lineThickness = 2;
-            startColor = glm::vec3(0.5, 0.8, 1.0); // Ensure strong blue/cyan
-        }
-        else if (type == "Fire") {
-            lSystem.setAxiom("X");
-            // Stochastic rule for more chaotic branching
-            // Using a simple random branching for now
-            lSystem.addRule('X', "F[+X][-X]FX"); // Sharp branching
-            lSystem.addRule('F', "FF");
-            angle = glm::linearRand(18.0f, 30.0f); // Random angle per generation? (Needs LSystem modification) - Use fixed for now.
-            angle = 22.5f;
-            step = 2.5f;
-            iterations = 5;
-            baseNumPasses = 25;
-            passIncrement = 10;
-            lineThickness = 1;
-            startColor = glm::vec3(1.0, 0.6, 0.2); // Orange/Red
-        }
-        else if (type == "Grass") {
-            lSystem.setAxiom("X");
-            lSystem.addRule('X', "F-[[X]+X]+F[+FX]-X"); // Classic plant-like
-            lSystem.addRule('F', "FF");
-            angle = 25.0f;
-            step = 2.0f;
-            iterations = 5;
-            baseNumPasses = 20;
-            passIncrement = 8;
-            lineThickness = 1;
-            startColor = glm::vec3(0.5, 0.9, 0.4); // Green
-        }
-        else if (type == "Lightning") {
-            lSystem.setAxiom("F");
-            lSystem.addRule('F', "F+F--F+F"); // Koch curve segment (jagged)
-            angle = 60.0f;
-            step = 4.0f;
+            lSystem.addRule('F', "F[-F][+F]F"); // Simple branching
             iterations = 3;
-            baseNumPasses = 15;
-            passIncrement = 6;
-            lineThickness = 2;
-            startColor = glm::vec3(1.0, 1.0, 0.5); // Yellow
-        }
-        else if (type == "Psychic") {
-            lSystem.setAxiom("F+F+F+F"); // Start with a square
-            lSystem.addRule('F', "F+f-FF+F+FF+Ff+FF-f+FF-F-FF-Ff-FFF"); // Complex fractal curve
-            lSystem.addRule('f', "ffffff"); // Move without drawing
-            angle = 90.0f;
-            step = 1.5f;
-            iterations = 2; // Gets complex fast
-            baseNumPasses = 10;
-            passIncrement = 4;
+            angle = glm::linearRand(25.0f, 45.0f);
+            step = 4.0f;
+            startColor = glm::vec3(0.7f, 0.7f, 0.7f); // Grey color
+            baseNumPasses = 10; // Fewer passes for subtle effect
+            passIncrement = 3;
             lineThickness = 1;
-            startColor = glm::vec3(0.9, 0.6, 1.0); // Purple/Pink
+            std::cout << "[Overlay Gen] Applying Normal rarity L-System settings." << std::endl;
         }
-        else if (type == "Fighting") {
-            lSystem.setAxiom("F+F+F+F"); // Square base
-            lSystem.addRule('F', "F+F-F-F+F"); // Box fractal
-            angle = 90.0f;
-            step = 5.0f;
-            iterations = 3;
-            baseNumPasses = 12;
-            passIncrement = 5;
-            lineThickness = 2;
-            startColor = glm::vec3(0.8, 0.5, 0.3); // Brown/Orange
-        }
-        // --- Add more type overrides here (Darkness, Metal, Dragon, etc.) ---
-        // Example: Dragon might use Sierpinski triangle rules
-        else if (type == "Dragon") {
-            lSystem.setAxiom("F-G-G");
-            lSystem.addRule('F', "F-G+F+G-F");
-            lSystem.addRule('G', "GG");
-            angle = 120.0f;
-            step = 3.0f;
-            iterations = 4;
-            baseNumPasses = 15;
-            passIncrement = 7;
-            lineThickness = 1;
-            startColor = glm::vec3(0.6, 0.4, 0.9); // Indigo
-        }
-        else if (type == "Darkness") {
-            lSystem.setAxiom("F");
-            lSystem.addRule('F', "F[+F-F]F[-F+F]F"); // Jagged, slightly chaotic
-            angle = 35.0f; step = 2.8f; iterations = 4; baseNumPasses = 18; passIncrement = 7; lineThickness = 1;
-            startColor = glm::vec3(0.6, 0.5, 0.7); // Dark Purple/Grey
-        }
-        else if (type == "Metal") {
-            lSystem.setAxiom("F+F+F+F");
-            lSystem.addRule('F', "FF+F+F+F+FF"); // Variation of box/grid fractal
-            angle = 90.0f; step = 3.5f; iterations = 3; baseNumPasses = 14; passIncrement = 6; lineThickness = 2;
-            startColor = glm::vec3(0.8, 0.8, 0.85); // Light Grey/Silver
-        }
-        else if (type == "Fairy") {
-            lSystem.setAxiom("X");
-            lSystem.addRule('X', "F[+X]F[-X]+X"); // Gentler curves than fire
-            lSystem.addRule('F', "FF");
-            angle = 20.0f; step = 2.2f; iterations = 5; baseNumPasses = 22; passIncrement = 9; lineThickness = 1;
-            startColor = glm::vec3(1.0, 0.8, 0.9); // Pink
-        }
-        else if (type == "Ghost") {
-            lSystem.setAxiom("YF"); // Modified Heighway dragon
-            lSystem.addRule('X', "X+YF+");
-            lSystem.addRule('Y', "-FX-Y");
-            angle = 90.0f; step = 3.0f; iterations = 6; // Needs more iterations
-            baseNumPasses = 16; passIncrement = 6; lineThickness = 1;
-            startColor = glm::vec3(0.7, 0.6, 0.9); // Lavender
-        }
-        else {
-            // Keep default settings for other types (Normal, Metal, Dark, Fairy, Ghost...)
-            startColor = defaultColor;
-        }
-        // --- 5. Adjust based on Rarity (after type settings) ---
-        // Make reverse/holo patterns denser or brighter maybe?
-        if (rarity == "reverse" || rarity == "holo") {
-            baseNumPasses = std::max(20, baseNumPasses + 5); // Increase passes
+        else if (rarity == "reverse") {
+            // Type-specific L-systems for Reverse Holo patterns
+            if (type == "Water") {
+                lSystem.setAxiom("F");
+                lSystem.addRule('F', "F F + [ + F - F - F ] - [ - F + F + F ]");
+                angle = 90.0f; step = 4.0f; iterations = 4; baseNumPasses = 10; passIncrement = 5; lineThickness = 2;
+                startColor = glm::vec3(0.5, 0.8, 1.0);
+            }
+            else if (type == "Fire") {
+                lSystem.setAxiom("X");
+                lSystem.addRule('X', "F[+X][-X]FX"); lSystem.addRule('F', "FF");
+                angle = 22.5f; step = 2.5f; iterations = 5; baseNumPasses = 25; passIncrement = 10; lineThickness = 1;
+                startColor = glm::vec3(1.0, 0.6, 0.2);
+            }
+            else if (type == "Grass") {
+                lSystem.setAxiom("X");
+                lSystem.addRule('X', "F-[[X]+X]+F[+FX]-X"); lSystem.addRule('F', "FF");
+                angle = 25.0f; step = 2.0f; iterations = 5; baseNumPasses = 20; passIncrement = 8; lineThickness = 1;
+                startColor = glm::vec3(0.5, 0.9, 0.4);
+            }
+            else if (type == "Lightning") {
+                lSystem.setAxiom("F");
+                lSystem.addRule('F', "F+F--F+F");
+                angle = 60.0f; step = 4.0f; iterations = 3; baseNumPasses = 15; passIncrement = 6; lineThickness = 2;
+                startColor = glm::vec3(1.0, 1.0, 0.5);
+            }
+            else if (type == "Psychic") {
+                lSystem.setAxiom("F+F+F+F");
+                lSystem.addRule('F', "F+f-FF+F+FF+Ff+FF-f+FF-F-FF-Ff-FFF"); lSystem.addRule('f', "ffffff");
+                angle = 90.0f; step = 1.5f; iterations = 2; baseNumPasses = 10; passIncrement = 4; lineThickness = 1;
+                startColor = glm::vec3(0.9, 0.6, 1.0);
+            }
+            else if (type == "Fighting") {
+                lSystem.setAxiom("F+F+F+F");
+                lSystem.addRule('F', "F+F-F-F+F");
+                angle = 90.0f; step = 5.0f; iterations = 3; baseNumPasses = 12; passIncrement = 5; lineThickness = 2;
+                startColor = glm::vec3(0.8, 0.5, 0.3);
+            }
+            else if (type == "Dragon") {
+                lSystem.setAxiom("F-G-G");
+                lSystem.addRule('F', "F-G+F+G-F"); lSystem.addRule('G', "GG");
+                angle = 120.0f; step = 3.0f; iterations = 4; baseNumPasses = 15; passIncrement = 7; lineThickness = 1;
+                startColor = glm::vec3(0.6, 0.4, 0.9);
+            }
+            else if (type == "Darkness") {
+                lSystem.setAxiom("F");
+                lSystem.addRule('F', "F[+F-F]F[-F+F]F");
+                angle = 35.0f; step = 2.8f; iterations = 4; baseNumPasses = 18; passIncrement = 7; lineThickness = 1;
+                startColor = glm::vec3(0.6, 0.5, 0.7);
+            }
+            else if (type == "Metal") {
+                lSystem.setAxiom("F+F+F+F");
+                lSystem.addRule('F', "FF+F+F+F+FF");
+                angle = 90.0f; step = 3.5f; iterations = 3; baseNumPasses = 14; passIncrement = 6; lineThickness = 2;
+                startColor = glm::vec3(0.8, 0.8, 0.85);
+            }
+            else if (type == "Fairy") {
+                lSystem.setAxiom("X");
+                lSystem.addRule('X', "F[+X]F[-X]+X"); lSystem.addRule('F', "FF");
+                angle = 20.0f; step = 2.2f; iterations = 5; baseNumPasses = 22; passIncrement = 9; lineThickness = 1;
+                startColor = glm::vec3(1.0, 0.8, 0.9);
+            }
+            else if (type == "Ghost") {
+                lSystem.setAxiom("YF");
+                lSystem.addRule('X', "X+YF+"); lSystem.addRule('Y', "-FX-Y");
+                angle = 90.0f; step = 3.0f; iterations = 6; baseNumPasses = 16; passIncrement = 6; lineThickness = 1;
+                startColor = glm::vec3(0.7, 0.6, 0.9);
+            }
+            else {
+                // Keep default settings for other types if specific rules aren't defined
+                startColor = defaultColor;
+            }
+            // Make Reverse patterns denser/thicker
+            baseNumPasses = std::max(20, baseNumPasses + 5);
             passIncrement = std::max(8, passIncrement + 3);
-            lineThickness = std::max(lineThickness, 2); // Ensure minimum thickness
+            lineThickness = std::max(lineThickness, 2);
+            std::cout << "[Overlay Gen] Applying REVERSE rarity L-System settings (Type: " << type << ")." << std::endl;
         }
-        else if (rarity == "ex" || rarity == "full art") {
-            // Maybe use the dot command approach for these regardless of type?
-            lSystem.clearRules(); // Clear type-based rules
-            lSystem.setAxiom("A");
-            lSystem.addRule('A', ". F [+A] [-A] F A"); // Draw dot, move, turn, branch
-            lSystem.addRule('F', "FF"); // Move command (short)
-            angle = glm::linearRand(45.0f, 135.0f);
-            step = 1.0;
-            iterations = 6; // Fewer iterations needed for dots
-            baseNumPasses = 50; // Lots of dots needed
-            passIncrement = 20;
-            lineThickness = 2; // Make dots 2x2
-            startColor = glm::vec3(1.0f); // White dots for intensity map
-            std::cout << "[Overlay Gen] Overriding L-System for EX/FullArt to use Dot Sparkle pattern." << std::endl;
+
+        int effectiveNumPasses = std::max(1, baseNumPasses + lsystemVariationLevel * passIncrement);
+        std::string lsystemString = lSystem.generate(iterations);
+        if (lsystemString.empty()) {
+            std::cerr << "Error: L-System generation resulted in empty string for key: " << cacheKey << std::endl;
+            return 0;
         }
-    }
+        renderer.setLineThickness(lineThickness);
 
+        std::cout << "[Overlay Gen] Rendering L-System. Passes: " << effectiveNumPasses << ", Thickness: " << lineThickness << ", Iterations: " << iterations << std::endl;
 
-    
+        std::random_device rd_pass;
+        std::mt19937 gen_pass(rd_pass());
+        std::uniform_real_distribution<float> dist_pos_x(0.0f, (float)texWidth);
+        std::uniform_real_distribution<float> dist_pos_y(0.0f, (float)texHeight);
+        std::uniform_real_distribution<float> dist_angle(0.0f, 360.0f);
+        std::uniform_real_distribution<float> dist_color_mod(0.7f, 1.3f);
 
-
-    // --- 6. Generate String and Render Passes ---
-    int effectiveNumPasses = std::max(1, baseNumPasses + lsystemVariationLevel * passIncrement);
-    std::string lsystemString = lSystem.generate(iterations);
-    if (lsystemString.empty()) {
-        std::cerr << "Error: L-System generation resulted in empty string for key: " << cacheKey << std::endl;
-        return 0;
-    }
-    renderer.setLineThickness(lineThickness);
-
-    std::cout << "[Overlay Gen] Rendering '" << type << "' type, '" << rarity << "' rarity pattern. Passes: " << effectiveNumPasses << ", Thickness: " << lineThickness << ", Iterations: " << iterations << std::endl;
-
-    // Use random generator for placing passes
-    std::random_device rd_pass;
-    std::mt19937 gen_pass(rd_pass());
-    std::uniform_real_distribution<float> dist_pos_x(0.0f, (float)texWidth);
-    std::uniform_real_distribution<float> dist_pos_y(0.0f, (float)texHeight);
-    std::uniform_real_distribution<float> dist_angle(0.0f, 360.0f);
-    std::uniform_real_distribution<float> dist_color_mod(0.7f, 1.3f);
-
-
-    for (int p = 0; p < effectiveNumPasses; ++p) {
-        glm::vec2 passStartPos(dist_pos_x(gen_pass), dist_pos_y(gen_pass));
-        float passStartAngle = dist_angle(gen_pass);
-        // Use the startColor determined by rarity/type logic
-        // Apply slight variation only if not normal rarity (which uses fixed grey)
-        glm::vec3 passColor = startColor;
-        if (rarity != "normal") {
-            passColor *= dist_color_mod(gen_pass);
+        for (int p = 0; p < effectiveNumPasses; ++p) {
+            glm::vec2 passStartPos(dist_pos_x(gen_pass), dist_pos_y(gen_pass));
+            float passStartAngle = dist_angle(gen_pass);
+            glm::vec3 passColor = startColor;
+            if (rarity != "normal") { // Apply color variation only if not normal rarity
+                passColor *= dist_color_mod(gen_pass);
+            }
+            renderer.setParameters(step, angle, glm::clamp(passColor, 0.0f, 1.0f), passStartPos, passStartAngle);
+            renderer.render(lsystemString);
         }
-        renderer.setParameters(step, angle, glm::clamp(passColor, 0.0f, 1.0f), passStartPos, passStartAngle);
-        renderer.render(lsystemString);
+
+        const std::vector<unsigned char>& lsysPixelData = renderer.getPixelData();
+        if (lsysPixelData.empty() || lsysPixelData.size() != static_cast<size_t>(texWidth) * texHeight * 4) {
+            std::cerr << "Error: L-System rendering failed or produced invalid data for " << cacheKey << std::endl;
+            return 0;
+        }
+        overlayPixelData = lsysPixelData; // Assign data for upload
     }
 
-    // --- 7. Get Pixel Data ---
-    const std::vector<unsigned char>& overlayPixelData = renderer.getPixelData();
-    if (overlayPixelData.empty() || overlayPixelData.size() != static_cast<size_t>(texWidth) * texHeight * 4) {
-        std::cerr << "Error: L-System rendering failed or produced invalid data for " << cacheKey << std::endl;
-        return 0;
-    }
-
-    // --- 8. Upload to OpenGL (Same as before) ---
-    GLuint overlayTextureID = 0;
     glGenTextures(1, &overlayTextureID);
     if (overlayTextureID == 0) {
         std::cerr << "OpenGL Error: Failed to generate texture ID for overlay " << cacheKey << std::endl;
         return 0;
     }
+
     glBindTexture(GL_TEXTURE_2D, overlayTextureID);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    if (useGlossyOverlay) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    }
+    else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    }
+
+    // Set alignment before uploading (important for non-power-of-4 widths like 1x1)
+    // If width * channels (1*4=4) is multiple of 4, use 4. Otherwise use 1.
+    if ((texWidth * 4) % 4 == 0) {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    }
+    else {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    }
+
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, overlayPixelData.data());
-    glGenerateMipmap(GL_TEXTURE_2D);
+
+    // Reset alignment to default
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+    if (!useGlossyOverlay) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+
     GLenum err;
     while ((err = glGetError()) != GL_NO_ERROR) {
         std::cerr << "OpenGL Texture Error (Overlay " << cacheKey << "): " << err << std::endl;
@@ -1569,9 +1542,13 @@ GLuint TextureManager::generateProceduralOverlayTexture(Card& card) {
     }
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    // --- 9. Update Cache and Card State ---
     textureMap[cacheKey] = overlayTextureID;
-    card.setGeneratedOverlayLevel(lsystemVariationLevel); // Store the level used
+    if (useGlossyOverlay) {
+        card.setGeneratedOverlayLevel(-2); // Mark as glossy overlay
+    }
+    else {
+        card.setGeneratedOverlayLevel(lsystemVariationLevel); // Mark with L-System level
+    }
     std::cout << "[Overlay Gen] Generated and cached texture ID " << overlayTextureID << " for: " << cacheKey << std::endl;
 
     return overlayTextureID;

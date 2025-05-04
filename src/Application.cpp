@@ -4,7 +4,8 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <iostream>
 #include <glm/gtc/type_ptr.hpp>
-#include <GL/freeglut.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
 #include <cmath>
 
 std::unique_ptr<Application> application;
@@ -36,17 +37,36 @@ Application::~Application() {
 void Application::initialize(int argc, char** argv) {
     std::cout << "Application::initialize START" << std::endl;
 
-    // Initialize GLUT
-    glutInit(&argc, argv);
-    glutInitContextVersion(3, 3);
-    glutInitContextProfile(GLUT_CORE_PROFILE);
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
-    glutInitWindowSize(800, 600);
+    // Initialize SDL
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
+        exit(1);
+    }
 
-    std::cout << "Calling glutCreateWindow..." << std::endl;
-    const char* originalTitle = "Pokémon Pack Simulator"; // Store original title
-    glutCreateWindow(originalTitle);
-    std::cout << "glutCreateWindow DONE (OpenGL context should exist now)" << std::endl;
+    // Set OpenGL attributes
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
+    // Create window
+    window = SDL_CreateWindow("Pokémon Pack Simulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_OPENGL);
+    if (window == NULL) {
+        std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
+        exit(1);
+    }
+
+    // Create context
+    glContext = SDL_GL_CreateContext(window);
+    if (glContext == NULL) {
+        std::cerr << "OpenGL context could not be created! SDL_Error: " << SDL_GetError() << std::endl;
+        exit(1);
+    }
+
+    // Initialize GLEW (or Galogen, or manually load function pointers)
+    // This is where you would typically call glewInit() or gladLoadGL()
+    // For Galogen, just make sure the first GL call happens after context creation
 
     //GLenum err = glGetError(); // Harmless call to potentially trigger loading
     //if (err != GL_NO_ERROR) {
@@ -115,15 +135,6 @@ void Application::initialize(int argc, char** argv) {
 
     std::cout << "OpenGL-dependent components Initialized." << std::endl;
 
-    // Setup GLUT callbacks (These need the application instance, often via a global)
-    glutDisplayFunc(displayCallback);
-    glutReshapeFunc(reshapeCallback);
-    glutKeyboardFunc(keyboardCallback);
-    glutMouseFunc(mouseCallback);
-    glutMotionFunc(motionCallback);
-    glutIdleFunc(idleCallback);
-    glutMouseWheelFunc(mouseWheelCallback);
-    glutSpecialFunc(specialCallback);
     // Initialize OpenGL states
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE); // Optional: Cull back faces
@@ -132,30 +143,61 @@ void Application::initialize(int argc, char** argv) {
 
     // Generate a card pack (Now cardPack and cardDatabase exist)
     if (cardPack && cardDatabase) { // Good practice to check pointers
+        const char* originalTitle = "Pokémon Pack Simulator";
         std::cout << "Generating cards..." << std::endl;
-        glutSetWindowTitle("Loading Card Images...");
+        SDL_SetWindowTitle(window, "Loading Card Images...");
         cardPack->generateCards(*cardDatabase);
         std::cout << "Cards generated." << std::endl;
-        glutSetWindowTitle(originalTitle);
+        SDL_SetWindowTitle(window, originalTitle);
     }
     else {
         std::cerr << "Error: cardPack or cardDatabase is null before generating cards!" << std::endl;
     }
 
     // Calculate initial time
-    lastFrameTime = (float)glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+    lastFrameTime = (float)SDL_GetTicks() / 1000.0f;
 
     std::cout << "Application::initialize END" << std::endl;
 }
 
 void Application::run() {
-	isRunning = true; // Set running flag to true
-    glutMainLoop();
+    isRunning = true; // Set running flag to true
+
+    // Main loop
+    SDL_Event e;
+    while (isRunning) {
+        // Handle events
+        while (SDL_PollEvent(&e) != 0) {
+            if (e.type == SDL_QUIT) {
+                isRunning = false;
+            }
+            else if (e.type == SDL_KEYDOWN) {
+                keyboardCallback(e.key.keysym.sym, 0, 0);
+            }
+            else if (e.type == SDL_MOUSEBUTTONDOWN) {
+                mouseCallback(e.button.button, SDL_PRESSED, e.button.x, e.button.y);
+            }
+            else if (e.type == SDL_MOUSEBUTTONUP) {
+                mouseCallback(e.button.button, SDL_RELEASED, e.button.x, e.button.y);
+            }
+            else if (e.type == SDL_MOUSEMOTION) {
+                motionCallback(e.motion.x, e.motion.y);
+            }
+            else if (e.type == SDL_MOUSEWHEEL) {
+                mouseWheelCallback(0, e.wheel.y, e.motion.x, e.motion.y);
+            }
+        }
+
+        update();
+        render();
+
+        SDL_GL_SwapWindow(window);
+    }
 }
 
 void Application::update() {
     // Calculate delta time
-    float newTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+    float newTime = SDL_GetTicks() / 1000.0f;
     deltaTime = newTime - currentTime;
     currentTime = newTime;
 
@@ -182,7 +224,7 @@ void Application::render() {
     // Create view-projection matrix
     glm::mat4 projection = glm::perspective(
         glm::radians(cameraFov),
-        (float)glutGet(GLUT_WINDOW_WIDTH) / (float)glutGet(GLUT_WINDOW_HEIGHT),
+        800.0f / 600.0f, // Hardcoded window dimensions
         cameraNearPlane,
         cameraFarPlane
     );
@@ -278,21 +320,16 @@ void Application::render() {
     //glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture from unit 0
 
     // Swap buffers
-    glutSwapBuffers();
+    SDL_GL_SwapWindow(window);
 }
 
 void Application::cleanup() {
     // Cleanup will be handled by unique_ptr destructors
-	isRunning = false; // Set running flag to false
-}
+    isRunning = false; // Set running flag to false
 
-// GLUT callback wrappers
-void Application::displayCallback() {
-    application->render();
-}
-
-void Application::reshapeCallback(int width, int height) {
-    glViewport(0, 0, width, height);
+    SDL_GL_DeleteContext(glContext);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 }
 
 void Application::keyboardCallback(unsigned char key, int x, int y) {
@@ -313,11 +350,6 @@ void Application::motionCallback(int x, int y) {
     }
 }
 
-void Application::idleCallback() {
-    application->update();
-    glutPostRedisplay();
-}
-
 void Application::mouseWheelCallback(int wheel, int direction, int x, int y) {
     // Pass to InputHandler or handle directly here
     if (application && application->inputHandler) {
@@ -333,7 +365,7 @@ void Application::mouseWheelCallback(int wheel, int direction, int x, int y) {
     //    } else if (direction < 0) { // Wheel scrolled down (or backward) -> Zoom out
     //        application->setCameraRadius(currentRadius + zoomSpeed);
     //    }
-    //    glutPostRedisplay(); // Request redraw after zoom
+    //    SDL_PostRedisplay(); // Request redraw after zoom
     // }
 }
 
@@ -347,10 +379,10 @@ void Application::resetPack() {
 
     // Change window title during generation
     const char* originalTitle = "Pokémon Pack Simulator"; // Store original title again
-    glutSetWindowTitle("Generating New Card Pack...");
+    SDL_SetWindowTitle(window, "Generating New Card Pack...");
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glutSwapBuffers();
+    SDL_GL_SwapWindow(window);
 
     // Clear any API/Texture cache *if desired* for a completely fresh pull.
     // Optional - uncomment if you want 'N' to force re-downloading everything.
@@ -369,7 +401,7 @@ void Application::resetPack() {
     }
 
     // Reset window title
-    glutSetWindowTitle(originalTitle);
+    SDL_SetWindowTitle(window, originalTitle);
 
     // Optional: Reset InputHandler state if necessary (e.g., mouse drag)
     if (inputHandler) {
@@ -405,7 +437,7 @@ void Application::regenerateCurrentCardOverlay() {
             currentCard.setOverlayTextureID(newOverlayID);
 
             // Request redraw
-            glutPostRedisplay();
+            SDL_UpdateWindowSurface(window);
         }
     }
 }

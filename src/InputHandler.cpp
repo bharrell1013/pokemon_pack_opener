@@ -1,6 +1,6 @@
 // InputHandler.cpp (New File)
 #include "gl_core_3_3.h"
-#include <GL/freeglut.h>    // Needed for exit(), GLUT_LEFT_BUTTON etc.
+#include <SDL2/SDL.h>    // Needed for exit(), SDL_BUTTON_LEFT etc.
 #include "InputHandler.hpp"
 #include "Application.hpp"  // Needed for the global 'application'
 #include "CardPack.hpp"     // Needed for packPtr methods
@@ -42,24 +42,59 @@ void InputHandler::handleKeyPress(unsigned char key, int x, int y) {
         break;
     case 't': // Lowercase t
     case 'T': // Uppercase T
-        std::cout << "'T' key pressed. Toggling shader mode." << std::endl;
+        std::cout << "--- Toggling Holo Shader Debug Mode ---" << std::endl;
         if (application) {
             TextureManager* tm = application->getApplicationTextureManager();
             if (tm) {
-                // Let's handle it here for simplicity:
+                // Cycle through debug modes 0 (final output) through 9 (border raw color)
                 static int holoDebugMode = 0;
-                holoDebugMode = (holoDebugMode + 1) % 8; // Cycle 0-7
-                tm->setHoloDebugMode(holoDebugMode); // Assuming this exists now
+                holoDebugMode = (holoDebugMode + 1) % 10; // Cycle 0-9 (10 modes total)
+                tm->setHoloDebugMode(holoDebugMode); // Pass the mode index to TextureManager
 
-                std::cout << "Holo Debug Mode: ";
-                if (holoDebugMode == 0) std::cout << "Final Holo" << std::endl;
-                else if (holoDebugMode == 1) std::cout << "Iridescence" << std::endl;
-                else if (holoDebugMode == 2) std::cout << "Anisotropy" << std::endl;
-                else if (holoDebugMode == 3) std::cout << "Fresnel Factor" << std::endl;
-                else if (holoDebugMode == 4) std::cout << "Base Texture" << std::endl;
-                else if (holoDebugMode == 5) std::cout << "Overlay Texture" << std::endl;
-                else if (holoDebugMode == 6) std::cout << "World Normal (Mapped)" << std::endl;
-                else if (holoDebugMode == 7) std::cout << "Parallax Coords" << std::endl;
+                std::cout << "Setting Holo Debug Mode to: " << holoDebugMode << std::endl;
+                std::cout << "  ---> Showing: ";
+
+                if (holoDebugMode == 0) {
+                    std::cout << "Final Composite Color" << std::endl;
+                    std::cout << "     (Shows the final calculated pixel color after all effects and layers are combined)." << std::endl;
+                }
+                else if (holoDebugMode == 1) {
+                    std::cout << "Combined Iridescence Component" << std::endl;
+                    std::cout << "     (Isolates the rainbow color shift effect from both the main card area and the border, combined as they would be)." << std::endl;
+                }
+                else if (holoDebugMode == 2) {
+                    std::cout << "Combined Specular/Gloss/Sheen Component" << std::endl;
+                    std::cout << "     (Isolates the bright highlights: Reverse Specular, Glossy Specular, and Border Sheen, combined)." << std::endl;
+                }
+                else if (holoDebugMode == 3) {
+                    std::cout << "Combined Fresnel + Border Base Component" << std::endl;
+                    std::cout << "     (Isolates the edge glow (Fresnel) from the main area and the base metallic color of the border)." << std::endl;
+                }
+                else if (holoDebugMode == 4) {
+                    std::cout << "Lit Base Texture Color Only" << std::endl;
+                    std::cout << "     (Shows the base card image after lighting (diffuse+micro-specular) is applied, using parallax/normal mapping, but *before* any rarity-specific effects like overlays or holo layers are added)." << std::endl;
+                }
+                else if (holoDebugMode == 5) {
+                    std::cout << "Raw Overlay Texture (L-System/Blank)" << std::endl;
+                    std::cout << "     (Shows the raw RGB color and Alpha from the 'overlayTexture'. This is the L-System pattern for Normal/Reverse, or potentially blank for Glossy types)." << std::endl;
+                }
+                else if (holoDebugMode == 6) {
+                    std::cout << "Final World Normal Vector (Base Lighting)" << std::endl;
+                    std::cout << "     (Visualizes the world-space normal vector used for the *base* lighting, after normal mapping is applied. Colors represent vector components: R=X, G=Y, B=Z)." << std::endl;
+                }
+                else if (holoDebugMode == 7) {
+                    std::cout << "Artwork Area Mask" << std::endl;
+                    std::cout << "     (Shows white where the pixel is *inside* the defined artwork rectangle ('isInsideArtwork' is true), black otherwise. Used for Reverse Holo logic)." << std::endl;
+                }
+                else if (holoDebugMode == 8) {
+                    std::cout << "Effective Border Mask (w/ Transparency)" << std::endl;
+                    std::cout << "     (Visualizes the border mask strength *after* the 'borderTransparencyFactor' is applied. Shows where and how strongly the border color is blended)." << std::endl;
+                }
+                else if (holoDebugMode == 9) {
+                    std::cout << "Raw Calculated Border Color (No Blend)" << std::endl;
+                    std::cout << "     (Shows the fully calculated color of the border (base metal + sheen + iridescence) *before* it's blended with the rest of the card based on the mask and transparency)." << std::endl;
+                }
+                std::cout << "-----------------------------------------" << std::endl;
 
             }
             else {
@@ -76,13 +111,13 @@ void InputHandler::handleKeyPress(unsigned char key, int x, int y) {
 
 void InputHandler::handleMouseClick(int button, int state, int x, int y) {
     if (!packPtr) return;
-    if (button == GLUT_LEFT_BUTTON) {
-        if (state == GLUT_DOWN) {
+    if (button == SDL_BUTTON_LEFT) {
+        if (state == SDL_PRESSED) {
             mouseDown = true; // Always track mouse down state
             lastMouseX = x;
             lastMouseY = y;
         }
-        else { // GLUT_UP
+        else { // SDL_RELEASED
             mouseDown = false;
         }
     }
@@ -112,7 +147,7 @@ void InputHandler::handleMouseMotion(int x, int y) {
 
         lastMouseX = x;
         lastMouseY = y;
-        glutPostRedisplay(); // Request redraw after movement
+        //glutPostRedisplay(); // Request redraw after movement
     }
 }
 
@@ -132,7 +167,7 @@ void InputHandler::handleMouseWheel(int wheel, int direction, int x, int y) {
             application->setCameraRadius(currentRadius + zoomSpeed);
             // std::cout << "Zoom Out (Wheel). New Radius: " << application->getCameraRadius() << std::endl;
         }
-        glutPostRedisplay(); // Request redraw after zoom
+        // Redraw will happen automatically in the next frame
     //}
 }
 
@@ -142,25 +177,25 @@ void InputHandler::handleSpecialKeyPress(int key, int x, int y) {
     if (!tm) return;
 
     switch (key) {
-    case GLUT_KEY_UP:
+    case SDLK_UP:
         std::cout << "Up Arrow Pressed - Increasing L-System Variation" << std::endl;
         tm->incrementLSystemVariationLevel(); // Implement this in TextureManager
         application->regenerateCurrentCardOverlay(); // Trigger regeneration
         break;
-    case GLUT_KEY_DOWN:
+    case SDLK_DOWN:
         std::cout << "Down Arrow Pressed - Decreasing L-System Variation" << std::endl;
         tm->decrementLSystemVariationLevel(); // Implement this in TextureManager
         application->regenerateCurrentCardOverlay(); // Trigger regeneration
         break;
         // Handle other special keys if needed (F1, PageUp, etc.)
-    case GLUT_KEY_LEFT:
+    case SDLK_LEFT:
         std::cout << "Left Arrow Pressed - Decreasing Shift" << std::endl;
         // tm->setTestShift(currentShift - 0.05f); // Need getter/setter or modify directly
         // Let's modify directly for now (requires making testHorizontalShift public or having a modify function)
         // OR pass the amount to change:
         tm->setTestShift(tm->getTestShift() - 0.05f); // Need getter getTestShift() in TM
         break;
-    case GLUT_KEY_RIGHT:
+    case SDLK_RIGHT:
         std::cout << "Right Arrow Pressed - Increasing Shift" << std::endl;
         tm->setTestShift(tm->getTestShift() + 0.05f); // Need getter getTestShift() in TM
         break;

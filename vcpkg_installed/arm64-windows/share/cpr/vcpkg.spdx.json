@@ -3,13 +3,13 @@
   "spdxVersion": "SPDX-2.2",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "documentNamespace": "https://spdx.org/spdxdocs/cpr-arm64-windows-1.11.2-f28e8302-fc81-494e-8ad1-b546b76a3e13",
-  "name": "cpr:arm64-windows@1.11.2 2b0fb3d371be242b8587987738873ed858b8627804b0640dacebd2854d1c6cce",
+  "documentNamespace": "https://spdx.org/spdxdocs/cpr-arm64-windows-1.11.2-f992e16a---9932-6b04709b1237",
+  "name": "cpr:arm64-windows@1.11.2 de256e7ccb5078b099dc5eda76e921f22de9010e14a54b85c0f071c3b3e22c8a",
   "creationInfo": {
     "creators": [
-      "Tool: vcpkg-2024-09-30-ab8988503c7cffabfd440b243a383c0a352a023d"
+      "Tool: vcpkg-2025-04-07-b8b513ba8778c918cff49c3e837aae5999d5d2aa"
     ],
-    "created": "2025-04-10T13:26:31Z"
+    "created": "2025-04-10T12:59:07Z"
   },
   "relationships": [
     {
@@ -61,6 +61,11 @@
       "spdxElementId": "SPDXRef-file-3",
       "relationshipType": "CONTAINED_BY",
       "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-3",
+      "relationshipType": "DEPENDENCY_MANIFEST_OF",
+      "relatedSpdxElement": "SPDXRef-port"
     }
   ],
   "packages": [
@@ -68,7 +73,7 @@
       "name": "cpr",
       "SPDXID": "SPDXRef-port",
       "versionInfo": "1.11.2",
-      "downloadLocation": "git+https://github.com/microsoft/vcpkg@36cfe399344149cbea14eece7277207823c26f76",
+      "downloadLocation": "git+https://github.com/Microsoft/vcpkg#ports/cpr",
       "homepage": "https://github.com/libcpr/cpr",
       "licenseConcluded": "MIT",
       "licenseDeclared": "NOASSERTION",
@@ -79,7 +84,7 @@
     {
       "name": "cpr:arm64-windows",
       "SPDXID": "SPDXRef-binary",
-      "versionInfo": "2b0fb3d371be242b8587987738873ed858b8627804b0640dacebd2854d1c6cce",
+      "versionInfo": "de256e7ccb5078b099dc5eda76e921f22de9010e14a54b85c0f071c3b3e22c8a",
       "downloadLocation": "NONE",
       "licenseConcluded": "MIT",
       "licenseDeclared": "NOASSERTION",
@@ -87,7 +92,7 @@
       "comment": "This is a binary package built by vcpkg."
     },
     {
-      "SPDXID": "SPDXRef-resource-1",
+      "SPDXID": "SPDXRef-resource-0",
       "name": "libcpr/cpr",
       "downloadLocation": "git+https://github.com/libcpr/cpr@1.11.2",
       "licenseConcluded": "NOASSERTION",
@@ -103,7 +108,7 @@
   ],
   "files": [
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/36cfe399344149cbea14eece7277207823c26f76/disable_werror.patch",
+      "fileName": "./disable_werror.patch",
       "SPDXID": "SPDXRef-file-0",
       "checksums": [
         {
@@ -115,7 +120,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/36cfe399344149cbea14eece7277207823c26f76/fix-static-build.patch",
+      "fileName": "./fix-static-build.patch",
       "SPDXID": "SPDXRef-file-1",
       "checksums": [
         {
@@ -127,7 +132,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/36cfe399344149cbea14eece7277207823c26f76/portfile.cmake",
+      "fileName": "./portfile.cmake",
       "SPDXID": "SPDXRef-file-2",
       "checksums": [
         {
@@ -139,7 +144,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/36cfe399344149cbea14eece7277207823c26f76/vcpkg.json",
+      "fileName": "./vcpkg.json",
       "SPDXID": "SPDXRef-file-3",
       "checksums": [
         {

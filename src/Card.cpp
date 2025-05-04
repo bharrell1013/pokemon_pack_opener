@@ -2,7 +2,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/compatibility.hpp> // For glm::mix (lerp)
-#include <GL/freeglut.h>             // For OpenGL types if needed (like GLuint) - Already included via gl_core_3_3?
 #include <iostream>                  // For std::cerr, std::cout
 #include <utility>                   // For std::move
 #include <stdexcept>                 // For std::runtime_error (optional)

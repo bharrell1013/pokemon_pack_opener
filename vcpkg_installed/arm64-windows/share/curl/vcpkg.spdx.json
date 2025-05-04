@@ -3,13 +3,13 @@
   "spdxVersion": "SPDX-2.2",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "documentNamespace": "https://spdx.org/spdxdocs/curl-arm64-windows-8.13.0#1-10e2383c-6de1-4af2-8e8b-978827974173",
-  "name": "curl:arm64-windows@8.13.0#1 05c8ce09d4ec4dec3a51a289286bf79c754b5b7416cb24dfcedfaf625cb4a902",
+  "documentNamespace": "https://spdx.org/spdxdocs/curl-arm64-windows-8.13.0#1-a8de635b---a390-8fed552adbe2",
+  "name": "curl:arm64-windows@8.13.0#1 79bfbcf3a9b649b13dbdead5989b51b68f8b40610205fb514f89e541d3dc462f",
   "creationInfo": {
     "creators": [
-      "Tool: vcpkg-2024-09-30-ab8988503c7cffabfd440b243a383c0a352a023d"
+      "Tool: vcpkg-2025-04-07-b8b513ba8778c918cff49c3e837aae5999d5d2aa"
     ],
-    "created": "2025-04-10T13:26:16Z"
+    "created": "2025-04-10T12:58:53Z"
   },
   "relationships": [
     {
@@ -111,6 +111,11 @@
       "spdxElementId": "SPDXRef-file-8",
       "relationshipType": "CONTAINED_BY",
       "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-8",
+      "relationshipType": "DEPENDENCY_MANIFEST_OF",
+      "relatedSpdxElement": "SPDXRef-port"
     }
   ],
   "packages": [
@@ -118,7 +123,7 @@
       "name": "curl",
       "SPDXID": "SPDXRef-port",
       "versionInfo": "8.13.0#1",
-      "downloadLocation": "git+https://github.com/microsoft/vcpkg@e0b645f9e08afb96b7d7eda9489663ffa41bf7c1",
+      "downloadLocation": "git+https://github.com/Microsoft/vcpkg#ports/curl",
       "homepage": "https://curl.se/",
       "licenseConcluded": "curl AND ISC AND BSD-3-Clause",
       "licenseDeclared": "NOASSERTION",
@@ -129,7 +134,7 @@
     {
       "name": "curl:arm64-windows",
       "SPDXID": "SPDXRef-binary",
-      "versionInfo": "05c8ce09d4ec4dec3a51a289286bf79c754b5b7416cb24dfcedfaf625cb4a902",
+      "versionInfo": "79bfbcf3a9b649b13dbdead5989b51b68f8b40610205fb514f89e541d3dc462f",
       "downloadLocation": "NONE",
       "licenseConcluded": "curl AND ISC AND BSD-3-Clause",
       "licenseDeclared": "NOASSERTION",
@@ -137,7 +142,7 @@
       "comment": "This is a binary package built by vcpkg."
     },
     {
-      "SPDXID": "SPDXRef-resource-1",
+      "SPDXID": "SPDXRef-resource-0",
       "name": "curl/curl",
       "downloadLocation": "git+https://github.com/curl/curl@${curl_version}",
       "licenseConcluded": "NOASSERTION",
@@ -153,7 +158,7 @@
   ],
   "files": [
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/e0b645f9e08afb96b7d7eda9489663ffa41bf7c1/cmake-config.patch",
+      "fileName": "./cmake-config.patch",
       "SPDXID": "SPDXRef-file-0",
       "checksums": [
         {
@@ -165,7 +170,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/e0b645f9e08afb96b7d7eda9489663ffa41bf7c1/cmake-project-include.cmake",
+      "fileName": "./cmake-project-include.cmake",
       "SPDXID": "SPDXRef-file-1",
       "checksums": [
         {
@@ -177,7 +182,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/e0b645f9e08afb96b7d7eda9489663ffa41bf7c1/dependencies.patch",
+      "fileName": "./dependencies.patch",
       "SPDXID": "SPDXRef-file-2",
       "checksums": [
         {
@@ -189,7 +194,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/e0b645f9e08afb96b7d7eda9489663ffa41bf7c1/export-components.patch",
+      "fileName": "./export-components.patch",
       "SPDXID": "SPDXRef-file-3",
       "checksums": [
         {
@@ -201,7 +206,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/e0b645f9e08afb96b7d7eda9489663ffa41bf7c1/pkgconfig-curl-config.patch",
+      "fileName": "./pkgconfig-curl-config.patch",
       "SPDXID": "SPDXRef-file-4",
       "checksums": [
         {
@@ -213,7 +218,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/e0b645f9e08afb96b7d7eda9489663ffa41bf7c1/portfile.cmake",
+      "fileName": "./portfile.cmake",
       "SPDXID": "SPDXRef-file-5",
       "checksums": [
         {
@@ -225,7 +230,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/e0b645f9e08afb96b7d7eda9489663ffa41bf7c1/usage",
+      "fileName": "./usage",
       "SPDXID": "SPDXRef-file-6",
       "checksums": [
         {
@@ -237,7 +242,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/e0b645f9e08afb96b7d7eda9489663ffa41bf7c1/vcpkg-cmake-wrapper.cmake",
+      "fileName": "./vcpkg-cmake-wrapper.cmake",
       "SPDXID": "SPDXRef-file-7",
       "checksums": [
         {
@@ -249,7 +254,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/e0b645f9e08afb96b7d7eda9489663ffa41bf7c1/vcpkg.json",
+      "fileName": "./vcpkg.json",
       "SPDXID": "SPDXRef-file-8",
       "checksums": [
         {

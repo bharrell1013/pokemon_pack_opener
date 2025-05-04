@@ -3,13 +3,13 @@
   "spdxVersion": "SPDX-2.2",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "documentNamespace": "https://spdx.org/spdxdocs/nlohmann-json-arm64-windows-3.11.3#1-7f216b3d-9c28-487a-bb56-941edf778061",
-  "name": "nlohmann-json:arm64-windows@3.11.3#1 31e419a3fbdaf1a28636d5d42ce661ce813c1fe634ab0a5c7cf83a07c35e8632",
+  "documentNamespace": "https://spdx.org/spdxdocs/nlohmann-json-arm64-windows-3.11.3#1-1d7b729c---aafb-1abe58c781a2",
+  "name": "nlohmann-json:arm64-windows@3.11.3#1 0400b267d4e797697224ffcb504808f38a5a3b10b556e5826dda37a2aa238e3f",
   "creationInfo": {
     "creators": [
-      "Tool: vcpkg-2024-09-30-ab8988503c7cffabfd440b243a383c0a352a023d"
+      "Tool: vcpkg-2025-04-07-b8b513ba8778c918cff49c3e837aae5999d5d2aa"
     ],
-    "created": "2025-04-10T13:26:36Z"
+    "created": "2025-04-10T12:59:13Z"
   },
   "relationships": [
     {
@@ -51,6 +51,11 @@
       "spdxElementId": "SPDXRef-file-2",
       "relationshipType": "CONTAINED_BY",
       "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-2",
+      "relationshipType": "DEPENDENCY_MANIFEST_OF",
+      "relatedSpdxElement": "SPDXRef-port"
     }
   ],
   "packages": [
@@ -58,7 +63,7 @@
       "name": "nlohmann-json",
       "SPDXID": "SPDXRef-port",
       "versionInfo": "3.11.3#1",
-      "downloadLocation": "git+https://github.com/microsoft/vcpkg@324d32ddba70bc49650d1a067ddcf3d0bfc6c9b6",
+      "downloadLocation": "git+https://github.com/Microsoft/vcpkg#ports/nlohmann-json",
       "homepage": "https://github.com/nlohmann/json",
       "licenseConcluded": "MIT",
       "licenseDeclared": "NOASSERTION",
@@ -69,7 +74,7 @@
     {
       "name": "nlohmann-json:arm64-windows",
       "SPDXID": "SPDXRef-binary",
-      "versionInfo": "31e419a3fbdaf1a28636d5d42ce661ce813c1fe634ab0a5c7cf83a07c35e8632",
+      "versionInfo": "0400b267d4e797697224ffcb504808f38a5a3b10b556e5826dda37a2aa238e3f",
       "downloadLocation": "NONE",
       "licenseConcluded": "MIT",
       "licenseDeclared": "NOASSERTION",
@@ -77,7 +82,7 @@
       "comment": "This is a binary package built by vcpkg."
     },
     {
-      "SPDXID": "SPDXRef-resource-1",
+      "SPDXID": "SPDXRef-resource-0",
       "name": "nlohmann/json",
       "downloadLocation": "git+https://github.com/nlohmann/json@v3.11.3",
       "licenseConcluded": "NOASSERTION",
@@ -93,7 +98,7 @@
   ],
   "files": [
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/324d32ddba70bc49650d1a067ddcf3d0bfc6c9b6/portfile.cmake",
+      "fileName": "./portfile.cmake",
       "SPDXID": "SPDXRef-file-0",
       "checksums": [
         {
@@ -105,7 +110,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/324d32ddba70bc49650d1a067ddcf3d0bfc6c9b6/usage",
+      "fileName": "./usage",
       "SPDXID": "SPDXRef-file-1",
       "checksums": [
         {
@@ -117,7 +122,7 @@
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/bharr/AppData/Local/vcpkg/registries/git-trees/324d32ddba70bc49650d1a067ddcf3d0bfc6c9b6/vcpkg.json",
+      "fileName": "./vcpkg.json",
       "SPDXID": "SPDXRef-file-2",
       "checksums": [
         {

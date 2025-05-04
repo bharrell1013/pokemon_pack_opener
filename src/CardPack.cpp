@@ -4,7 +4,6 @@
 #include <iostream>
 #include <filesystem>
 #include <glm/gtc/type_ptr.hpp>
-#include <GL/freeglut_std.h>
 #include <random> // For rarity selection
 #include <vector> // For type list
 #include <glm/gtc/random.hpp>
@@ -222,7 +221,7 @@ void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, c
             }
             else { std::cerr << "Warning: Uniform 'basePackTexture' not found." << std::endl; }
 
-            // Unit 1: Pokémon Overlay Texture
+            // Unit 1: Pokï¿½mon Overlay Texture
             if (overlayTexLoc != -1) {
                 glActiveTexture(GL_TEXTURE1);
                 if (selectedPackPokemonTextureID != 0) { // Only bind if we have a valid selected overlay
@@ -260,10 +259,10 @@ void CardPack::render(GLuint packShaderProgramID, const glm::mat4& viewMatrix, c
         glDisable(GL_CULL_FACE);
 
         // Get current time for holo shader animation
-        // Ensure glut is initialized before calling this!
-        float currentTime = 0.0f;
-        // Just get elapsed time directly - if GLUT isn't initialized it will return 0
-        currentTime = static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f;
+        // Ensure SDL is initialized before calling this!
+       float currentTime = 0.0f;
+       // Just get elapsed time directly - if SDL isn't initialized it will return 0
+       //currentTime = static_cast<float>(glutGet(GLUT_ELAPSED_TIME)) / 1000.0f;
 
         // Iterate through cards and render them
         for (size_t i = 0; i < cards.size(); ++i) {

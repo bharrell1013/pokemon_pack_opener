@@ -1,0 +1,3 @@
+@echo off
+echo Starting Pokemon Pack Simulator...
+start PokemonPackSimulator.exe

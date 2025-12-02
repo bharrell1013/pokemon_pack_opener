@@ -1,7 +1,7 @@
 {
     "name": "pokemon-pack-sim",
     "version-string": "0.1.0",
-    "builtin-baseline": "0bf1354d6704ec797acea686d0250afc4036a082",
+    "builtin-baseline": "9aee6e968f51e15ee93606f064691d8f6d228190",
     "dependencies": [
       "cpr",
       "nlohmann-json",

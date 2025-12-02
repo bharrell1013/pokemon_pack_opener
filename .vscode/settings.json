@@ -1,5 +1,5 @@
 {
-    "cmake.sourceDirectory": "C:/Projects/CS 334/final_project/base/include/glm",
+    "cmake.sourceDirectory": "C:/PersonalProjects/pokemon_pack_opener/include/glm",
     "files.associations": {
         "xstring": "cpp"
     }

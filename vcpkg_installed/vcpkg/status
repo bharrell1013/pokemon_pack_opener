@@ -3,7 +3,7 @@ Version: 2024-04-23
 Architecture: arm64-windows
 Multi-Arch: same
 Abi: 4a3d23c1d93722c28baad6c2aa541479327a3c6bc86744b769a1dfbada04a92d
-Status: install ok installed
+Status: purge ok not-installed
 
 Package: zlib
 Version: 1.3.1
@@ -12,14 +12,14 @@ Architecture: arm64-windows
 Multi-Arch: same
 Abi: 9322a53300a01097172fead07d7a9f9e1a5b24e4f37b584625606cfb3cef6b2e
 Description: A compression library
-Status: install ok installed
+Status: purge ok not-installed
 
 Package: vcpkg-cmake-config
 Version: 2024-05-23
 Architecture: arm64-windows
 Multi-Arch: same
 Abi: 0fc899db4f35a8ce6ca3f4cc8d16ba4a848432614a0d3da524988e4130359b39
-Status: install ok installed
+Status: purge ok not-installed
 
 Package: curl
 Version: 8.13.0
@@ -30,35 +30,35 @@ Multi-Arch: same
 Abi: 79bfbcf3a9b649b13dbdead5989b51b68f8b40610205fb514f89e541d3dc462f
 Description: A library for transferring data with URLs
 Default-Features: non-http, ssl
-Status: install ok installed
+Status: purge ok not-installed
 
 Package: curl
 Feature: non-http
 Architecture: arm64-windows
 Multi-Arch: same
 Description: Enables protocols beyond HTTP/HTTPS/HTTP2
-Status: install ok installed
+Status: purge ok not-installed
 
 Package: curl
 Feature: schannel
 Architecture: arm64-windows
 Multi-Arch: same
 Description: SSL support (Secure Channel)
-Status: install ok installed
+Status: purge ok not-installed
 
 Package: curl
 Feature: ssl
 Architecture: arm64-windows
 Multi-Arch: same
 Description: Default SSL backend
-Status: install ok installed
+Status: purge ok not-installed
 
 Package: curl
 Feature: sspi
 Architecture: arm64-windows
 Multi-Arch: same
 Description: SSPI support
-Status: install ok installed
+Status: purge ok not-installed
 
 Package: cpr
 Version: 1.11.2
@@ -68,7 +68,7 @@ Multi-Arch: same
 Abi: de256e7ccb5078b099dc5eda76e921f22de9010e14a54b85c0f071c3b3e22c8a
 Description: C++ Requests is a simple wrapper around libcurl inspired by the excellent Python Requests project.
 Default-Features: ssl
-Status: install ok installed
+Status: purge ok not-installed
 
 Package: cpr
 Feature: ssl
@@ -76,7 +76,7 @@ Depends: curl
 Architecture: arm64-windows
 Multi-Arch: same
 Description: Enable SSL support
-Status: install ok installed
+Status: purge ok not-installed
 
 Package: nlohmann-json
 Version: 3.11.3
@@ -86,7 +86,7 @@ Architecture: arm64-windows
 Multi-Arch: same
 Abi: 0400b267d4e797697224ffcb504808f38a5a3b10b556e5826dda37a2aa238e3f
 Description: JSON for Modern C++
-Status: install ok installed
+Status: purge ok not-installed
 
 Package: sdl2
 Version: 2.32.4
@@ -94,6 +94,97 @@ Depends: vcpkg-cmake, vcpkg-cmake-config
 Architecture: arm64-windows
 Multi-Arch: same
 Abi: 4d80d79dea3da68532b5eaa6e74b5da70f67cad234b1da5b18839c2205c12147
+Description: Simple DirectMedia Layer is a cross-platform development library designed to provide low level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL and Direct3D.
+Status: purge ok not-installed
+
+Package: vcpkg-cmake
+Version: 2024-04-23
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 0032d9238a22177f27bce880a143ee158c28380ddc4c0ae72d6845271eaaea8a
+Status: install ok installed
+
+Package: zlib
+Version: 1.3.1
+Depends: vcpkg-cmake
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 88d9d44c3a399b9087d50a2a5d7726245d2389d9a42e839fb691c0361974c4d0
+Description: A compression library
+Status: install ok installed
+
+Package: vcpkg-cmake-config
+Version: 2024-05-23
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 0f19c3f53fdc465ada1976dfd35b3a4d9dbb05e6583c25943f0f194669333771
+Status: install ok installed
+
+Package: curl
+Version: 8.17.0
+Depends: vcpkg-cmake, vcpkg-cmake-config, zlib
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 6645732c77c7697e6ce9c213a83f0f8a099a8b0e6ebd3a15998ae008bac46bae
+Description: A library for transferring data with URLs
+Default-Features: non-http, ssl
+Status: install ok installed
+
+Package: curl
+Feature: non-http
+Architecture: x64-windows
+Multi-Arch: same
+Description: Enables protocols beyond HTTP/HTTPS/HTTP2/HTTP3
+Status: install ok installed
+
+Package: curl
+Feature: ssl
+Architecture: x64-windows
+Multi-Arch: same
+Description: Default SSL / TLS implementation.
+Status: install ok installed
+
+Package: curl
+Feature: sspi
+Architecture: x64-windows
+Multi-Arch: same
+Description: SSPI support
+Status: install ok installed
+
+Package: cpr
+Version: 1.13.0
+Depends: curl, vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: bcebfd953fb46286fc55bc4b01205e2ec1651832d37a0805007a70ddd49008b9
+Description: C++ Requests is a simple wrapper around libcurl inspired by the excellent Python Requests project.
+Default-Features: ssl
+Status: install ok installed
+
+Package: cpr
+Feature: ssl
+Depends: curl
+Architecture: x64-windows
+Multi-Arch: same
+Description: Enable SSL support
+Status: install ok installed
+
+Package: nlohmann-json
+Version: 3.12.0
+Port-Version: 1
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 7996b60a9b6c3522f49257ee6cc414d16a2e01df598c64e4c9207635156dc5a5
+Description: JSON for Modern C++
+Status: install ok installed
+
+Package: sdl2
+Version: 2.32.10
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: fa6274512b8d19023895c085f3499f3e8bb334bd2c5f0f08cd80beae1ef2bcdf
 Description: Simple DirectMedia Layer is a cross-platform development library designed to provide low level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL and Direct3D.
 Status: install ok installed
 

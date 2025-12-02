@@ -64,6 +64,11 @@ void Application::initialize(int argc, char** argv) {
         exit(1);
     }
 
+    // Enable vsync for smoother rendering
+    if (SDL_GL_SetSwapInterval(1) < 0) {
+        std::cerr << "Warning: Failed to enable vsync! SDL_Error: " << SDL_GetError() << std::endl;
+    }
+
     // Initialize GLEW (or Galogen, or manually load function pointers)
     // This is where you would typically call glewInit() or gladLoadGL()
     // For Galogen, just make sure the first GL call happens after context creation
@@ -318,9 +323,6 @@ void Application::render() {
     // Deactivate the pack shader program and unbind texture AFTER pack and potentially cards have been drawn
     glUseProgram(0);
     //glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture from unit 0
-
-    // Swap buffers
-    SDL_GL_SwapWindow(window);
 }
 
 void Application::cleanup() {

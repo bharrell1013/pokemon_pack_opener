@@ -78,8 +78,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <ExecutablePath>$(ProjectDir)bin\x64;$(ExecutablePath)</ExecutablePath>
-    <IncludePath>$(ProjectDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)lib\x64;$(VcpkgInstalledDir)x64-windows\x64-windows\lib;$(VcpkgInstalledDir)x64-windows\x64-windows\debug\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)include;$(ProjectDir)vcpkg_installed\x64-windows\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)lib\x64;$(ProjectDir)vcpkg_installed\x64-windows\debug\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -90,8 +90,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <ExecutablePath>$(ProjectDir)bin\x64;$(ExecutablePath)</ExecutablePath>
-    <IncludePath>$(ProjectDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)lib\x64;$(VcpkgInstalledDir)x64-windows\x64-windows\lib;$(VcpkgInstalledDir)x64-windows\x64-windows\debug\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)include;$(ProjectDir)vcpkg_installed\x64-windows\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)lib\x64;$(ProjectDir)vcpkg_installed\x64-windows\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
     <VcpkgEnabled>true</VcpkgEnabled>
@@ -121,17 +121,19 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Projects\CS 334\final_project\base\vcpkg_installed\x64-windows\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)vcpkg_installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;SDL2d.lib;SDL2maind.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Projects\CS 334\final_project\base\vcpkg_installed\x64-windows\x64-windows\lib;C:\Projects\CS 334\final_project\base\vcpkg_installed\x64-windows\x64-windows\debug\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;SDL2d.lib;SDL2maind.lib;cpr.lib;libcurl-d.lib;zlibd.lib;ws2_32.lib;crypt32.lib;wldap32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)vcpkg_installed\x64-windows\debug\lib;$(ProjectDir)vcpkg_installed\x64-windows\debug\lib\manual-link;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)models\*.obj" "$(OutDir)models\" /Y /I
-xcopy "$(ProjectDir)textures" "$(OutDir)textures\" /Y /I /S /E</Command>
+      <Command>xcopy "$(ProjectDir)models\*.*" "$(OutDir)models\" /Y /I
+xcopy "$(ProjectDir)textures" "$(OutDir)textures\" /Y /I /S /E
+xcopy "$(ProjectDir)shaders" "$(OutDir)shaders\" /Y /I /S /E
+xcopy "$(ProjectDir)vcpkg_installed\x64-windows\debug\bin\*.dll" "$(OutDir)" /Y /I</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -163,19 +165,21 @@ xcopy "$(ProjectDir)textures" "$(OutDir)textures\" /Y /I /S /E</Command>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Projects\CS 334\final_project\base\vcpkg_installed\x64-windows\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)vcpkg_installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Projects\CS 334\final_project\base\vcpkg_installed\x64-windows\x64-windows\lib;C:\Projects\CS 334\final_project\base\vcpkg_installed\x64-windows\x64-windows\debug\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;SDL2.lib;SDL2main.lib;cpr.lib;libcurl.lib;zlib.lib;ws2_32.lib;crypt32.lib;wldap32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)vcpkg_installed\x64-windows\lib;$(ProjectDir)vcpkg_installed\x64-windows\lib\manual-link;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)models\*.obj" "$(OutDir)models\" /Y /I
-xcopy "$(ProjectDir)textures" "$(OutDir)textures\" /Y /I /S /E</Command>
+      <Command>xcopy "$(ProjectDir)models\*.*" "$(OutDir)models\" /Y /I
+xcopy "$(ProjectDir)textures" "$(OutDir)textures\" /Y /I /S /E
+xcopy "$(ProjectDir)shaders" "$(OutDir)shaders\" /Y /I /S /E
+xcopy "$(ProjectDir)vcpkg_installed\x64-windows\bin\*.dll" "$(OutDir)" /Y /I</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -10,7 +10,15 @@
 #include <iomanip>
 #include <functional>
 #include <algorithm> // For std::remove_if
+#include <cctype>    // For std::toupper
+
+#ifdef _WIN32
+#include <windows.h>
+#include <winhttp.h>
+#pragma comment(lib, "winhttp.lib")
+#endif
 #include <glm/gtc/random.hpp>
+#include <cstdlib>   // For std::getenv
 
 // --- Dependencies for API ---
 #include <cpr/cpr.h>         // For HTTP requests
@@ -24,6 +32,16 @@ using json = nlohmann::json; // Alias for convenience
 #include <glm/gtc/type_ptr.hpp>
 
 TextureManager::TextureManager() : cardShader(0), holoShader(0), currentShader(0), cardBackTextureID(0) {
+    // Initialize API key: check environment variable first, fall back to hardcoded
+    const char* envKey = std::getenv("POKEMON_TCG_API_KEY");
+    if (envKey && envKey[0] != '\0') {
+        apiKey = envKey;
+        std::cout << "Using API key from environment variable POKEMON_TCG_API_KEY" << std::endl;
+    } else {
+        apiKey = "56f39a72-5758-495c-ac18-134248507b5a";
+        std::cout << "Using default API key" << std::endl;
+    }
+
     // Ensure OpenGL context is available before initializing shaders
     // This should be guaranteed by the call order in Application::initialize
     initializeShaders();
@@ -51,7 +69,7 @@ TextureManager::TextureManager() : cardShader(0), holoShader(0), currentShader(0
              // Decide how to handle this - maybe disable caching?
          }
      }
-     std::cout << "Loading Pokémon pack overlay images from: " << packImagesDirectory << std::endl;
+     std::cout << "Loading Pokï¿½mon pack overlay images from: " << packImagesDirectory << std::endl;
      if (std::filesystem::exists(packImagesDirectory) && std::filesystem::is_directory(packImagesDirectory)) {
          for (const auto& entry : std::filesystem::directory_iterator(packImagesDirectory)) {
              if (entry.is_regular_file()) {
@@ -225,21 +243,16 @@ GLuint TextureManager::getTexture(const std::string& textureName) {
 
 // --- NEW: Helper to map internal rarity names to API query strings ---
 std::string TextureManager::mapRarityToApiQuery(const std::string& rarity) {
-    // Based on https://docs.pokemontcg.io/api-reference/cards/search-cards
-    // Note: API uses specific strings, sometimes combined with subtypes. Adjust as needed.
-    //       These are examples, you might need more specific queries for V, VMAX, VSTAR etc.
-    if (rarity == "normal") return "rarity:Common OR rarity:Uncommon"; // Combine for less specific search
-    if (rarity == "reverse") return "rarity:Common OR rarity:Uncommon"; // Reverse Holo is a print property, base card is C/U
-    if (rarity == "holo") return "rarity:\"Rare Holo\"";
-    // "ex" could mean many things now (old EX, modern ex). Be more specific if possible.
-    // Let's assume modern 'ex' which are often "Double Rare" or similar, or old 'EX' which were "Rare Holo EX"
-    if (rarity == "ex") return "(rarity:\"Double Rare\" OR rarity:\"Rare Holo EX\")"; // Broaden search for EX/ex
-    // Full Arts are often Ultra Rare or Secret Rare, sometimes Illustration Rares
-    if (rarity == "full art") return "(rarity:\"Ultra Rare\" OR rarity:\"Secret Rare\" OR rarity:\"Illustration Rare\" OR rarity:\"Special Illustration Rare\")";
+    // Simplified queries to avoid API errors; include supertype:pokemon for reliability
+    if (rarity == "normal") return "supertype:pokemon rarity:Common";
+    if (rarity == "reverse") return "supertype:pokemon rarity:Common"; // Reverse Holo on Common cards
+    if (rarity == "holo") return "supertype:pokemon rarity:\"Rare Holo\"";
+    if (rarity == "ex") return "supertype:pokemon (rarity:\"Double Rare\" OR rarity:\"Rare Holo EX\")";
+    if (rarity == "full art") return "supertype:pokemon (rarity:\"Ultra Rare\" OR rarity:\"Secret Rare\")";
 
-    // Fallback for unknown rarities
-    std::cerr << "Warning: Unknown rarity '" << rarity << "' for API query. Defaulting to Common/Uncommon." << std::endl;
-    return "rarity:Common OR rarity:Uncommon";
+    // Fallback
+    std::cerr << "Warning: Unknown rarity '" << rarity << "' for API query. Using Common." << std::endl;
+    return "supertype:pokemon rarity:Common";
 }
 
 // --- NEW: Fetches image URL from Pokemon TCG API ---
@@ -249,10 +262,19 @@ std::string TextureManager::fetchCardImageUrl(const Card& card) {
     std::string cardType = card.getPokemonType();
     std::string typeQueryPart = "";
 
-    if (!cardType.empty() && cardType != "Colorless" && cardType != "Normal") { // Adjusted logic slightly for clarity
-        typeQueryPart = "types:" + cardType;
+    // Capitalize the first letter of the type for API compatibility
+    auto capitalizeFirst = [](std::string s) {
+        if (!s.empty()) {
+            s[0] = std::toupper(static_cast<unsigned char>(s[0]));
+        }
+        return s;
+    };
+    std::string apiType = capitalizeFirst(cardType);
+
+    if (!apiType.empty() && apiType != "Colorless" && apiType != "Normal") {
+        typeQueryPart = "types:" + apiType;
     }
-    else if (cardType == "Normal" || cardType == "Colorless") { // Group Normal/Colorless as Colorless type in API
+    else if (apiType == "Normal" || apiType == "Colorless" || apiType == "normal") {
         typeQueryPart = "types:Colorless";
     }
     // Add handling for other card types (Trainer, Energy) if needed
@@ -371,46 +393,89 @@ std::string TextureManager::fetchCardImageUrl(const Card& card) {
         }
 
 
-        // Build parameters, including the page number
+        // Use CPR's built-in parameter encoding (it handles URL encoding properly)
         cpr::Parameters params = cpr::Parameters{
             {"q", searchQuery},
             {"pageSize", std::to_string(resultsToFetch)},
             {"page", std::to_string(pageToFetch)}
-            // No orderBy needed unless specifically desired
         };
 
-        // Make API call
-        std::cout << "[API] Sending request to: " << apiBaseUrl << " with params: q=" << searchQuery
-            << ", pageSize=" << resultsToFetch << ", page=" << pageToFetch << std::endl;
-        cpr::Response response = cpr::Get(cpr::Url{ apiBaseUrl }, params, cpr::Header{ {"X-Api-Key", apiKey} });
+        // Check for proxy - first environment variables, then Windows system settings
+        std::string proxyUrl = "";
+        const char* httpsProxy = std::getenv("HTTPS_PROXY");
+        if (!httpsProxy) httpsProxy = std::getenv("https_proxy");
+        if (!httpsProxy) httpsProxy = std::getenv("HTTP_PROXY");
+        if (!httpsProxy) httpsProxy = std::getenv("http_proxy");
+        if (httpsProxy && httpsProxy[0] != '\0') {
+            proxyUrl = httpsProxy;
+        }
+#ifdef _WIN32
+        else {
+            // Try to get Windows system proxy settings
+            WINHTTP_CURRENT_USER_IE_PROXY_CONFIG proxyConfig;
+            if (WinHttpGetIEProxyConfigForCurrentUser(&proxyConfig)) {
+                if (proxyConfig.lpszProxy != NULL) {
+                    int size_needed = WideCharToMultiByte(CP_UTF8, 0, proxyConfig.lpszProxy, -1, NULL, 0, NULL, NULL);
+                    std::string proxy(size_needed - 1, 0);
+                    WideCharToMultiByte(CP_UTF8, 0, proxyConfig.lpszProxy, -1, &proxy[0], size_needed, NULL, NULL);
+                    if (!proxy.empty()) {
+                        // Windows proxy might not have http:// prefix
+                        if (proxy.find("://") == std::string::npos) {
+                            proxyUrl = "http://" + proxy;
+                        } else {
+                            proxyUrl = proxy;
+                        }
+                    }
+                    GlobalFree(proxyConfig.lpszProxy);
+                }
+                if (proxyConfig.lpszProxyBypass) GlobalFree(proxyConfig.lpszProxyBypass);
+                if (proxyConfig.lpszAutoConfigUrl) GlobalFree(proxyConfig.lpszAutoConfigUrl);
+            }
+        }
+#endif
 
+        // Make API call with browser-like headers
+        cpr::Response response;
+        if (!proxyUrl.empty()) {
+            response = cpr::Get(
+                cpr::Url{ apiBaseUrl }, 
+                params,
+                cpr::Header{ 
+                    {"X-Api-Key", apiKey}, 
+                    {"User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+                    {"Accept", "application/json"},
+                    {"Accept-Language", "en-US,en;q=0.9"}
+                }, 
+                cpr::Proxies{{"https", proxyUrl}, {"http", proxyUrl}},
+                cpr::Timeout{std::chrono::seconds{15}},
+                cpr::VerifySsl{false}
+            );
+        } else {
+            response = cpr::Get(
+                cpr::Url{ apiBaseUrl }, 
+                params,
+                cpr::Header{ 
+                    {"X-Api-Key", apiKey}, 
+                    {"User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+                    {"Accept", "application/json"},
+                    {"Accept-Language", "en-US,en;q=0.9"}
+                }, 
+                cpr::Timeout{std::chrono::seconds{15}},
+                cpr::VerifySsl{false}
+            );
+        }
         // Handle Response & Errors
         if (response.status_code != 200) {
-            std::cerr << "[API] Error fetching card data. Status code: " << response.status_code
-                << ", URL: " << response.url << ", Error: " << response.error.message << std::endl;
-
-            if (response.status_code == 429) {
-                std::cerr << "[API] !!! RATE LIMIT HIT (429 Too Many Requests) !!! Consider adding delays or reducing requests." << std::endl;
-                // TODO: Implement exponential backoff/retry mechanism here if needed
-            }
-            else if (response.status_code == 400) {
-                std::cerr << "[API] Bad Request (400). Check query syntax: q=" << searchQuery << std::endl;
-            }
-            else if (response.status_code == 404) {
-                std::cerr << "[API] Not Found (404). Possibly invalid endpoint or query parameters?" << std::endl;
-            }
-            // Log response body for debugging if available
-            if (!response.text.empty()) {
-                std::cerr << "[API] Response body (truncated): " << response.text.substr(0, 500) << (response.text.length() > 500 ? "..." : "") << std::endl;
+            if (response.status_code == 0) {
+                std::cerr << "[API] Connection failed - network may be restricted" << std::endl;
+            } else {
+                std::cerr << "[API] Request failed (status " << response.status_code << ")" << std::endl;
             }
 
-            // If cache already exists, don't wipe it on error, just return empty for this attempt
-            // If cache didn't exist, maybe cache an empty result to prevent immediate retries?
             if (!apiQueryCache.count(searchQuery)) {
-                std::cout << "[API Cache] Caching empty result for query \"" << searchQuery << "\" after API error." << std::endl;
-                apiQueryCache[searchQuery] = {}; // Cache empty result placeholder
+                apiQueryCache[searchQuery] = {};
             }
-            return ""; // Return empty string on error
+            return "";
         }
 
         // Parse JSON
@@ -566,17 +631,20 @@ std::string TextureManager::fetchCardImageUrl(const Card& card) {
 // --- NEW: Downloads image data from a URL ---
 std::vector<unsigned char> TextureManager::downloadImageData(const std::string& imageUrl) {
     std::cout << "Downloading image from: " << imageUrl << std::endl;
-    cpr::Response response = cpr::Get(cpr::Url{imageUrl});
+    cpr::Response response = cpr::Get(
+        cpr::Url{imageUrl}, 
+        cpr::Timeout{std::chrono::seconds{15}},
+        cpr::VerifySsl{false}  // Disable SSL verification for Windows compatibility
+    );
 
     if (response.status_code == 200 && !response.text.empty()) {
         // Convert the downloaded string data to a vector of unsigned char
         return std::vector<unsigned char>(response.text.begin(), response.text.end());
     }
 
-    std::cerr << "Failed to download image. Status code: " << response.status_code
-              << ", URL: " << imageUrl << ", Error: " << response.error.message << std::endl;
-    if (response.text.empty() && response.status_code == 200) {
-        std::cerr << "Downloaded image data was empty." << std::endl;
+    std::cerr << "[API] Image download failed (status " << response.status_code << ") for: " << imageUrl << std::endl;
+    if (response.status_code == 0) {
+        std::cerr << "[API] Connection error: " << response.error.message << std::endl;
     }
     return {}; // Return empty vector on failure
 }

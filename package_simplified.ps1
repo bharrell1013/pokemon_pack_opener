@@ -4,8 +4,14 @@
 # Configuration
 $packageDir = "PokemonPackSimulator"
 $outputZip = "PokemonPackSimulator.zip"
-$executablePath = "x64/Debug/base_freeglut.exe"
 $newExecutableName = "PokemonPackSimulator.exe"
+
+# Try Release build first, fall back to Debug
+$executablePath = "x64/Release/base_freeglut.exe"
+if (-not (Test-Path $executablePath)) {
+    $executablePath = "x64/Debug/base_freeglut.exe"
+    Write-Host "Note: Using Debug build. For better performance, build in Release mode."
+}
 
 # Function to log messages
 function Write-Log {
@@ -74,14 +80,24 @@ if (-not $executableCopied) {
     exit 1
 }
 
-# Copy required DLLs
-$requiredDlls = @(
-    "x64/Debug/freeglut.dll",
-    "x64/Debug/cpr.dll",
-    "x64/Debug/libcurl-d.dll",
-    "x64/Debug/zlibd1.dll",
-    "x64/Debug/SDL2d.dll"
-)
+# Copy required DLLs - try Release first, fall back to Debug
+$isReleaseBuild = $executablePath -like "*Release*"
+
+if ($isReleaseBuild) {
+    $requiredDlls = @(
+        "vcpkg_installed/x64-windows/bin/cpr.dll",
+        "vcpkg_installed/x64-windows/bin/libcurl.dll",
+        "vcpkg_installed/x64-windows/bin/zlib1.dll",
+        "vcpkg_installed/x64-windows/bin/SDL2.dll"
+    )
+} else {
+    $requiredDlls = @(
+        "vcpkg_installed/x64-windows/debug/bin/cpr.dll",
+        "vcpkg_installed/x64-windows/debug/bin/libcurl-d.dll",
+        "vcpkg_installed/x64-windows/debug/bin/zlibd1.dll",
+        "vcpkg_installed/x64-windows/debug/bin/SDL2d.dll"
+    )
+}
 
 $missingDlls = 0
 foreach ($dll in $requiredDlls) {

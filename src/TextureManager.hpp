@@ -39,7 +39,7 @@ private:
 	int lsystemVariationLevel = 0; // L-System variation level for procedural textures
 
     // --- API Configuration ---
-    const std::string apiKey = "56f39a72-5758-495c-ac18-134248507b5a";
+    std::string apiKey;
     const std::string apiBaseUrl = "https://api.pokemontcg.io/v2/cards";
 
     // --- Private Helper Methods ---

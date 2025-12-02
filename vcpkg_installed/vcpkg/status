@@ -2,7 +2,7 @@ Package: vcpkg-cmake
 Version: 2024-04-23
 Architecture: arm64-windows
 Multi-Arch: same
-Abi: d1e65ae225e1f7eaafcef2be3602442218ea6a5ada3e8d9342c32893f49b6356
+Abi: 4a3d23c1d93722c28baad6c2aa541479327a3c6bc86744b769a1dfbada04a92d
 Status: install ok installed
 
 Package: zlib
@@ -10,7 +10,7 @@ Version: 1.3.1
 Depends: vcpkg-cmake
 Architecture: arm64-windows
 Multi-Arch: same
-Abi: bd52740f8d6e18af56afc69b9f1e199fe2653a40a7f0773ad9f119cecf66ef0f
+Abi: 9322a53300a01097172fead07d7a9f9e1a5b24e4f37b584625606cfb3cef6b2e
 Description: A compression library
 Status: install ok installed
 
@@ -18,7 +18,7 @@ Package: vcpkg-cmake-config
 Version: 2024-05-23
 Architecture: arm64-windows
 Multi-Arch: same
-Abi: 6421d29b41b12c49c99f7298164006cb943389b06ba7159470674fcd770254db
+Abi: 0fc899db4f35a8ce6ca3f4cc8d16ba4a848432614a0d3da524988e4130359b39
 Status: install ok installed
 
 Package: curl
@@ -27,7 +27,7 @@ Port-Version: 1
 Depends: vcpkg-cmake, vcpkg-cmake-config, zlib
 Architecture: arm64-windows
 Multi-Arch: same
-Abi: 05c8ce09d4ec4dec3a51a289286bf79c754b5b7416cb24dfcedfaf625cb4a902
+Abi: 79bfbcf3a9b649b13dbdead5989b51b68f8b40610205fb514f89e541d3dc462f
 Description: A library for transferring data with URLs
 Default-Features: non-http, ssl
 Status: install ok installed
@@ -65,7 +65,7 @@ Version: 1.11.2
 Depends: curl, vcpkg-cmake, vcpkg-cmake-config
 Architecture: arm64-windows
 Multi-Arch: same
-Abi: 2b0fb3d371be242b8587987738873ed858b8627804b0640dacebd2854d1c6cce
+Abi: de256e7ccb5078b099dc5eda76e921f22de9010e14a54b85c0f071c3b3e22c8a
 Description: C++ Requests is a simple wrapper around libcurl inspired by the excellent Python Requests project.
 Default-Features: ssl
 Status: install ok installed
@@ -84,7 +84,16 @@ Port-Version: 1
 Depends: vcpkg-cmake, vcpkg-cmake-config
 Architecture: arm64-windows
 Multi-Arch: same
-Abi: 31e419a3fbdaf1a28636d5d42ce661ce813c1fe634ab0a5c7cf83a07c35e8632
+Abi: 0400b267d4e797697224ffcb504808f38a5a3b10b556e5826dda37a2aa238e3f
 Description: JSON for Modern C++
+Status: install ok installed
+
+Package: sdl2
+Version: 2.32.4
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: arm64-windows
+Multi-Arch: same
+Abi: 4d80d79dea3da68532b5eaa6e74b5da70f67cad234b1da5b18839c2205c12147
+Description: Simple DirectMedia Layer is a cross-platform development library designed to provide low level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL and Direct3D.
 Status: install ok installed
 

@@ -88,3 +88,12 @@ Abi: a5408e0da3e816e9732a6ab507be6c8f0c19834fe52acd81dfcc88591570f57c
 Description: JSON for Modern C++
 Status: install ok installed
 
+Package: sdl2
+Version: 2.32.4
+Depends: vcpkg-cmake:arm64-windows, vcpkg-cmake-config:arm64-windows
+Architecture: x64-windows
+Multi-Arch: same
+Abi: d632150ded54317b5a6c418bf87c60bcf0f5e25b1599d3bc6957cb98a7999c20
+Description: Simple DirectMedia Layer is a cross-platform development library designed to provide low level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL and Direct3D.
+Status: install ok installed
+

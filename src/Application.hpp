@@ -2,7 +2,8 @@
 #define APPLICATION_HPP
 
 #include <memory>
-#include <GL/freeglut.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
 #include "CardPack.hpp"
 #include "CardDatabase.hpp"
 #include "TextureManager.hpp"
@@ -30,6 +31,10 @@ private:
 
     // Application state
     bool isRunning;
+
+    // SDL
+    SDL_Window* window = nullptr;
+    SDL_GLContext glContext = nullptr;
 
     // Shader program
     GLuint shaderProgramID;

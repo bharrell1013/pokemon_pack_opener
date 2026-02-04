@@ -12,5 +12,7 @@ inc = \
 outname = base_freeglut
 all:
 	g++ -std=c++17 $(sources) $(libs) $(inc) -o $(outname)
+web:
+	./scripts/build_web.sh
 clean:
 	rm $(outname)

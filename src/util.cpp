@@ -3,13 +3,26 @@
 #include <fstream>
 #include "util.hpp"
 
+namespace {
+std::string resolveShaderPath(const std::string& filename) {
+#ifdef __EMSCRIPTEN__
+	const std::string prefix = "shaders/";
+	if (filename.rfind(prefix, 0) == 0) {
+		return prefix + "web/" + filename.substr(prefix.size());
+	}
+#endif
+	return filename;
+}
+} // namespace
+
 // Compile a single shader stage
 GLuint compileShader(GLenum type, const std::string& filename) {
+	const std::string resolvedFilename = resolveShaderPath(filename);
 	// Read the file
-	std::ifstream file(filename);
+	std::ifstream file(resolvedFilename);
 	if (!file.is_open()) {
 		std::stringstream ss;
-		ss << "Failed to open " << filename << std::endl;
+		ss << "Failed to open " << resolvedFilename << std::endl;
 		throw std::runtime_error(ss.str());
 	}
 
@@ -37,7 +50,7 @@ GLuint compileShader(GLenum type, const std::string& filename) {
 
 		// Construct an error message with the compile log
 		std::stringstream ss;
-		ss << "Error compiling " << filename << ":" << std::endl << std::endl;
+		ss << "Error compiling " << resolvedFilename << ":" << std::endl << std::endl;
 		ss << logText.data() << std::endl;
 
 		// Cleanup shader and throw an exception

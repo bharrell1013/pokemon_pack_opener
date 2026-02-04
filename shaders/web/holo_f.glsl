@@ -1,4 +1,6 @@
-#version 330 core
+#version 300 es
+precision highp float;
+
 out vec4 FragColor;
 
 // --- Inputs ---
@@ -20,8 +22,8 @@ uniform sampler2D normalMap;     // RGB=Normal TS, A=Height
 uniform float time;
 uniform int cardRarity; // 0=Normal, 1=Reverse, 2=Holo, 3=EX, 4=Full Art etc.
 uniform int cardType;
-uniform vec3 lightDir = normalize(vec3(0.5, 0.8, 1.0));
-uniform int renderMode = 0; // Debug Mode
+uniform vec3 lightDir;
+uniform int renderMode; // Debug Mode
 uniform vec2 artworkRectMin;
 uniform vec2 artworkRectMax;
 
@@ -42,7 +44,7 @@ const float fresnelIntensityNormal = 0.03;
 const float reversePatternMaskInfluence = 0.85;
 const float reverseEffectIntensity = 0.2;
 const float reverseSpecularPower = 50.0;
-const float reverseSpecularIntensity = 0.5f;
+const float reverseSpecularIntensity = 0.5;
 const float reverseIridescenceIntensity = 0.9;
 const float reverseIridescenceFreq = 2.5;
 const float reverseIridescenceContrast = 1.5;

@@ -7,6 +7,10 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include <cmath>
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#include <emscripten/html5.h>
+#endif
 
 std::unique_ptr<Application> application;
 
@@ -37,6 +41,10 @@ Application::~Application() {
 void Application::initialize(int argc, char** argv) {
     std::cout << "Application::initialize START" << std::endl;
 
+#ifdef __EMSCRIPTEN__
+    SDL_SetHint(SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT, "#canvas");
+#endif
+
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
@@ -44,18 +52,29 @@ void Application::initialize(int argc, char** argv) {
     }
 
     // Set OpenGL attributes
+#ifdef __EMSCRIPTEN__
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+#endif
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
     // Create window
-    window = SDL_CreateWindow("Pokémon Pack Simulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_OPENGL);
+    const int initialWidth = 1280;
+    const int initialHeight = 720;
+    window = SDL_CreateWindow("Pokémon Pack Simulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, initialWidth, initialHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (window == NULL) {
         std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
         exit(1);
     }
+#ifdef __EMSCRIPTEN__
+    emscripten_set_canvas_element_size("#canvas", initialWidth, initialHeight);
+#endif
 
     // Create context
     glContext = SDL_GL_CreateContext(window);
@@ -167,37 +186,56 @@ void Application::initialize(int argc, char** argv) {
 
 void Application::run() {
     isRunning = true; // Set running flag to true
-
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg(
+        [](void* arg) {
+            static_cast<Application*>(arg)->tick();
+        },
+        this,
+        0,
+        true);
+#else
     // Main loop
-    SDL_Event e;
     while (isRunning) {
-        // Handle events
-        while (SDL_PollEvent(&e) != 0) {
-            if (e.type == SDL_QUIT) {
-                isRunning = false;
-            }
-            else if (e.type == SDL_KEYDOWN) {
-                keyboardCallback(e.key.keysym.sym, 0, 0);
-            }
-            else if (e.type == SDL_MOUSEBUTTONDOWN) {
-                mouseCallback(e.button.button, SDL_PRESSED, e.button.x, e.button.y);
-            }
-            else if (e.type == SDL_MOUSEBUTTONUP) {
-                mouseCallback(e.button.button, SDL_RELEASED, e.button.x, e.button.y);
-            }
-            else if (e.type == SDL_MOUSEMOTION) {
-                motionCallback(e.motion.x, e.motion.y);
-            }
-            else if (e.type == SDL_MOUSEWHEEL) {
-                mouseWheelCallback(0, e.wheel.y, e.motion.x, e.motion.y);
-            }
-        }
-
-        update();
-        render();
-
-        SDL_GL_SwapWindow(window);
+        tick();
     }
+#endif
+}
+
+void Application::tick() {
+    SDL_Event e;
+    // Handle events
+    while (SDL_PollEvent(&e) != 0) {
+        if (e.type == SDL_QUIT) {
+            isRunning = false;
+        }
+        else if (e.type == SDL_KEYDOWN) {
+            keyboardCallback(e.key.keysym.sym, 0, 0);
+        }
+        else if (e.type == SDL_MOUSEBUTTONDOWN) {
+            mouseCallback(e.button.button, SDL_PRESSED, e.button.x, e.button.y);
+        }
+        else if (e.type == SDL_MOUSEBUTTONUP) {
+            mouseCallback(e.button.button, SDL_RELEASED, e.button.x, e.button.y);
+        }
+        else if (e.type == SDL_MOUSEMOTION) {
+            motionCallback(e.motion.x, e.motion.y);
+        }
+        else if (e.type == SDL_MOUSEWHEEL) {
+            mouseWheelCallback(0, e.wheel.y, e.motion.x, e.motion.y);
+        }
+    }
+
+    update();
+    render();
+
+    SDL_GL_SwapWindow(window);
+
+#ifdef __EMSCRIPTEN__
+    if (!isRunning) {
+        emscripten_cancel_main_loop();
+    }
+#endif
 }
 
 void Application::update() {
@@ -227,9 +265,17 @@ void Application::render() {
     // --- End Camera Calculation ---
 
     // Create view-projection matrix
+    int width = 0;
+    int height = 0;
+    SDL_GetWindowSize(window, &width, &height);
+    float aspectRatio = 4.0f / 3.0f;
+    if (width > 0 && height > 0) {
+        aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+    }
+
     glm::mat4 projection = glm::perspective(
         glm::radians(cameraFov),
-        800.0f / 600.0f, // Hardcoded window dimensions
+        aspectRatio,
         cameraNearPlane,
         cameraFarPlane
     );
@@ -288,13 +334,15 @@ void Application::render() {
             GLint lightPosLoc = glGetUniformLocation(shaderProgramID, "lightPos");
             GLint lightColorLoc = glGetUniformLocation(shaderProgramID, "lightColor");
             GLint shininessLoc = glGetUniformLocation(shaderProgramID, "shininess");
-            GLint texLoc = glGetUniformLocation(shaderProgramID, "diffuseTexture"); // Sampler
+            GLint specularStrengthLoc = glGetUniformLocation(shaderProgramID, "specularStrength");
+            GLint texLoc = glGetUniformLocation(shaderProgramID, "basePackTexture"); // Sampler
 
             if (viewPosLoc != -1) glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
             // TODO: Make lightPos dynamic or keep it fixed?
             if (lightPosLoc != -1) glUniform3f(lightPosLoc, 1.0f, 2.0f, 3.0f); // Example light pos
             if (lightColorLoc != -1) glUniform3f(lightColorLoc, 1.0f, 1.0f, 1.0f); // White light
             if (shininessLoc != -1) glUniform1f(shininessLoc, 32.0f); // Example shininess
+            if (specularStrengthLoc != -1) glUniform1f(specularStrengthLoc, 0.3f);
 
             // Set texture for the pack model
             if (texLoc != -1 && packTextureID != 0) {

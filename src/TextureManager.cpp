@@ -1053,7 +1053,7 @@ void TextureManager::applyHoloShader(const Card& card, float time) {
     GLint rainbowGradLoc = glGetUniformLocation(holoShader, "rainbowGradient");
     if (rainbowGradLoc != -1) {
         glActiveTexture(GL_TEXTURE3); // Activate texture unit 3
-        glBindTexture(GL_TEXTURE_1D, rainbowGradientTextureID); // Bind the generated texture
+        glBindTexture(GL_TEXTURE_2D, rainbowGradientTextureID); // Bind the generated texture
         glUniform1i(rainbowGradLoc, 3); // Tell sampler to use unit 3
     }
     else {
@@ -1119,8 +1119,8 @@ void TextureManager::initializeShaders() {
     std::cout << "[DEBUG] TextureManager::initializeShaders() - this: " << this
         << ", cardShader ID: " << cardShader
         << ", holoShader ID: " << holoShader << std::endl;
-    // --- Generate 1D Rainbow Gradient Texture ---
-    std::cout << "Generating 1D Rainbow Gradient Texture..." << std::endl;
+    // --- Generate 2D Rainbow Gradient Texture (1px tall, WebGL-compatible) ---
+    std::cout << "Generating 2D Rainbow Gradient Texture..." << std::endl;
     const int gradientWidth = 256;
     std::vector<unsigned char> gradientData(gradientWidth * 3); // RGB format
     for (int i = 0; i < gradientWidth; ++i) {
@@ -1147,24 +1147,25 @@ void TextureManager::initializeShaders() {
         std::cerr << "Error: Failed to generate Rainbow Gradient Texture ID." << std::endl;
     }
     else {
-        glBindTexture(GL_TEXTURE_1D, rainbowGradientTextureID);
-        // Set alignment for 1D RGB data (3 bytes per pixel)
+        glBindTexture(GL_TEXTURE_2D, rainbowGradientTextureID);
+        // Set alignment for RGB data (3 bytes per pixel)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // Important for non-multiple-of-4 row sizes (though less critical for 1D)
-        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB, gradientWidth, 0, GL_RGB, GL_UNSIGNED_BYTE, gradientData.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, gradientWidth, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, gradientData.data());
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4); // Reset to default
 
         // Set texture parameters
-        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Repeat or Clamp? Repeat often better for shifting effects.
-        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glBindTexture(GL_TEXTURE_1D, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Repeat or Clamp? Repeat often better for shifting effects.
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
         GLenum err = glGetError();
         if (err != GL_NO_ERROR) {
             std::cerr << "OpenGL Error after generating Rainbow Gradient Texture: " << err << std::endl;
         }
         else {
-            std::cout << "Successfully generated 1D Rainbow Gradient Texture. ID: " << rainbowGradientTextureID << std::endl;
+            std::cout << "Successfully generated 2D Rainbow Gradient Texture. ID: " << rainbowGradientTextureID << std::endl;
         }
     }
     // --- End Rainbow Gradient ---
@@ -1294,13 +1295,26 @@ GLuint TextureManager::createShaderProgram(const std::string& vertexPath, const 
     return program; // Return the valid program ID
 }
 
+namespace {
+std::string resolveShaderPath(const std::string& path) {
+#ifdef __EMSCRIPTEN__
+    const std::string prefix = "shaders/";
+    if (path.rfind(prefix, 0) == 0) {
+        return prefix + "web/" + path.substr(prefix.size());
+    }
+#endif
+    return path;
+}
+} // namespace
+
 std::string TextureManager::loadShaderSource(const std::string& path) {
-    std::cout << "Loading shader source from: " << path << std::endl;
-    std::ifstream file(path);
+    const std::string resolvedPath = resolveShaderPath(path);
+    std::cout << "Loading shader source from: " << resolvedPath << std::endl;
+    std::ifstream file(resolvedPath);
     if (!file.is_open()) {
-        std::cerr << "Error: Could not open shader file: " << path << std::endl;
+        std::cerr << "Error: Could not open shader file: " << resolvedPath << std::endl;
         std::cerr << "Current working directory: " << std::filesystem::current_path() << std::endl;
-        std::filesystem::path absPath = std::filesystem::absolute(path);
+        std::filesystem::path absPath = std::filesystem::absolute(resolvedPath);
         std::cerr << "Attempted absolute path: " << absPath << std::endl;
         return ""; // Return empty string on failure
     }
@@ -1309,7 +1323,7 @@ std::string TextureManager::loadShaderSource(const std::string& path) {
     file.close(); // Close the file
     std::string source = buffer.str();
     if (source.empty()) {
-        std::cout << "Warning: Shader file is empty: " << path << std::endl;
+        std::cout << "Warning: Shader file is empty: " << resolvedPath << std::endl;
     }
     return source;
 }

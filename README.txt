@@ -20,6 +20,10 @@ A 3D OpenGL-based Pokemon card pack opening simulator that renders interactive c
   sudo pacman -Sy base-devel glm freeglut
   ```
 
+### Web (Emscripten)
+- [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html)
+- Python 3 (required by Emscripten)
+
 ## Installation
 
 ### Windows Setup
@@ -90,6 +94,36 @@ pokemon-pack-sim/
 ├── include/         # Header files
 └── lib/            # Library dependencies
 ```
+
+## Web Build (Browser / GitHub Pages)
+
+This project ships with WebGL-compatible shaders and an Emscripten build script.
+
+1. Install and activate Emscripten:
+   ```bash
+   ./emsdk/emsdk install latest
+   ./emsdk/emsdk activate latest
+   source ./emsdk/emsdk_env.sh
+   ```
+
+2. Build the web bundle into `docs/`:
+   ```bash
+   ./scripts/build_web.sh
+   ```
+
+3. Serve locally to test:
+   ```bash
+   cd docs
+   python3 -m http.server 8000
+   ```
+   Then open <http://localhost:8000>.
+
+### Hosting on GitHub Pages
+
+1. Commit the generated `docs/` output (or add a CI build that produces it).
+2. In GitHub, go to **Settings → Pages**.
+3. Set **Source** to the `main` branch and the `/docs` folder.
+4. Save. Your site will be hosted at the URL GitHub Pages provides.
 
 ## Troubleshooting
 

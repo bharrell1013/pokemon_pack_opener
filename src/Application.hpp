@@ -60,6 +60,7 @@ public:
 
     void initialize(int argc, char** argv);
     void run();
+    void tick();
     void update();
     void render();
     void cleanup();

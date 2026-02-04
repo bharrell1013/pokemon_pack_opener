@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pokémon Pack Simulator</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>Pokémon Pack Simulator</h1>
+        <p>WebGL build powered by Emscripten + SDL2.</p>
+      </header>
+      <main>
+        <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+        <div id="status">Loading…</div>
+      </main>
+    </div>
+    <script>
+      var Module = {
+        canvas: (function () {
+          return document.getElementById('canvas');
+        })(),
+        setStatus: function (text) {
+          var status = document.getElementById('status');
+          if (status) {
+            status.textContent = text;
+          }
+        },
+        onRuntimeInitialized: function () {
+          Module.setStatus('Ready');
+        }
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>
